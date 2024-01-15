@@ -5,30 +5,32 @@ edition = "2021"
 
 
 [[bin]]
-name ="api"
-path ="src/api/main.rs"
+name = "api"
+path = "src/api/bin/main.rs"
 
 [[bin]]
-name ="nft"
-path ="src/nft/main.rs"
+name = "nft"
+path = "src/nft/main.rs"
 
 [[bin]]
-name ="ticket"
-path ="src/ticket/main.rs"
+name = "ticket"
+path = "src/ticket/main.rs"
 
 [[bin]]
-name ="email"
-path ="src/email/main.rs"
+name = "email"
+path = "src/email/main.rs"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axum = "0.7.4"
-serde = { version = "1.0.195", features = ["derive"] }
-serde_json = "1.0.111"
-tokio = { version = "1.35.1", features = ["full"] }
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
-
+axum = { version = "0.7.4", features = ["macros"] }
+deadpool-diesel = { version = "0.5.0", features = ["postgres"] }
+diesel = { version = "2", features = ["postgres"] }
+diesel_migrations = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
