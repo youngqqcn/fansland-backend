@@ -33,8 +33,8 @@ fansland后端
 
 ## nft模块
 
-- 监听NFT合约MintNft交易事件, 存入数据库
-- 监听NFT合约Transfer交易事件, 存入数据库
+- 监听NFT合约`MintNft`交易事件, 存入数据库
+- 监听NFT合约`Transfer`交易事件, 存入数据库
 
 ## ticket模块
 

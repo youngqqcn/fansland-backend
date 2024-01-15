@@ -11,8 +11,17 @@ edition = "2021"
 
 [[bin]]
 name ="api"
-path ="src/api/cmd/main.rs"
+path ="src/api/main.rs"
 
 [[bin]]
-name ="client"
-path ="src//cmd/main.rs"
+name ="nft"
+path ="src/nft/main.rs"
+
+[[bin]]
+name ="ticket"
+path ="src/ticket/main.rs"
+
+[[bin]]
+name ="email"
+path ="src/email/main.rs"
+
