@@ -1,2 +1,3 @@
-workspace = { members = ["fansland_api"] }
-
+[workspace]
+members = ["fansland_api"]
+resolver = "2"
