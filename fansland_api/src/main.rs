@@ -11,45 +11,35 @@
 //! for a real world application using axum and diesel
 
 use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
     routing::{get, post},
     Router,
 };
 use diesel::prelude::*;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::net::SocketAddr;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use dotenv::dotenv;
 
+use crate::handler::{list_users, create_user};
+
 // this embeds the migrations into the application binary
 // the migration path is relative to the `CARGO_MANIFEST_DIR`
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
+// pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
 
 // normally part of your generated schema.rs file
-table! {
-    users (id) {
-        id -> Integer,
-        name -> Text,
-        hair_color -> Nullable<Text>,
-    }
-}
+// table! {
+//     users (id) {
+//         id -> Integer,
+//         name -> Text,
+//         hair_color -> Nullable<Text>,
+//     }
+// }
 
-#[derive(serde::Serialize, Selectable, Queryable)]
-struct User {
-    id: i32,
-    name: String,
-    hair_color: Option<String>,
-}
+pub mod model;
+pub mod schema;
+pub mod handler;
 
-#[derive(serde::Deserialize, Insertable)]
-#[diesel(table_name = users)]
-struct NewUser {
-    name: String,
-    hair_color: Option<String>,
-}
+// use crate::handler::*;
 
 #[tokio::main]
 async fn main() {
@@ -91,43 +81,4 @@ async fn main() {
     tracing::debug!("listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn create_user(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(new_user): Json<NewUser>,
-) -> Result<Json<User>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
-    let res = conn
-        .interact(|conn| {
-            diesel::insert_into(users::table)
-                .values(new_user)
-                .returning(User::as_returning())
-                .get_result(conn)
-        })
-        .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
-    Ok(Json(res))
-}
-
-async fn list_users(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
-) -> Result<Json<Vec<User>>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
-    let res = conn
-        .interact(|conn| users::table.select(User::as_select()).load(conn))
-        .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
-    Ok(Json(res))
-}
-
-/// Utility function for mapping any error into a `500 Internal Server Error`
-/// response.
-fn internal_error<E>(err: E) -> (StatusCode, String)
-where
-    E: std::error::Error,
-{
-    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
