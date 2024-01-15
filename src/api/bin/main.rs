@@ -22,6 +22,8 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::net::SocketAddr;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use dotenv::dotenv;
+
 // this embeds the migrations into the application binary
 // the migration path is relative to the `CARGO_MANIFEST_DIR`
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
@@ -51,6 +53,8 @@ struct NewUser {
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
+
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
