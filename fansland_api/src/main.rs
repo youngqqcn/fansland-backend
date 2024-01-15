@@ -20,26 +20,11 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use dotenv::dotenv;
 
-use crate::handler::{list_users, create_user};
+use crate::handler::{create_user, list_users};
 
-// this embeds the migrations into the application binary
-// the migration path is relative to the `CARGO_MANIFEST_DIR`
-// pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
-
-// normally part of your generated schema.rs file
-// table! {
-//     users (id) {
-//         id -> Integer,
-//         name -> Text,
-//         hair_color -> Nullable<Text>,
-//     }
-// }
-
+pub mod handler;
 pub mod model;
 pub mod schema;
-pub mod handler;
-
-// use crate::handler::*;
 
 #[tokio::main]
 async fn main() {
@@ -60,15 +45,6 @@ async fn main() {
     let pool = deadpool_diesel::postgres::Pool::builder(manager)
         .build()
         .unwrap();
-
-    // run the migrations on server startup
-    // {
-    //     let conn = pool.get().await.unwrap();
-    //     conn.interact(|conn| conn.run_pending_migrations(MIGRATIONS).map(|_| ()))
-    //         .await
-    //         .unwrap()
-    //         .unwrap();
-    // }
 
     // build our application with some routes
     let app = Router::new()

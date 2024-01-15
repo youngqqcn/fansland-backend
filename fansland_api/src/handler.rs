@@ -12,15 +12,9 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use dotenv::dotenv;
 
-use crate::schema::*;
+use crate::model::*;
 
-diesel::table! {
-    users (id) {
-        id -> Int4,
-        name -> Text,
-        hair_color -> Nullable<Text>,
-    }
-}
+
 
 pub async fn create_user(
     State(pool): State<deadpool_diesel::postgres::Pool>,
@@ -50,20 +44,6 @@ pub async fn list_users(
         .map_err(internal_error)?
         .map_err(internal_error)?;
     Ok(Json(res))
-}
-
-#[derive(serde::Serialize, Selectable, Queryable)]
-pub struct User {
-    id: i32,
-    name: String,
-    hair_color: Option<String>,
-}
-
-#[derive(serde::Deserialize, Insertable)]
-#[diesel(table_name = users)]
-pub struct NewUser {
-    name: String,
-    hair_color: Option<String>,
 }
 
 /// Utility function for mapping any error into a `500 Internal Server Error`
