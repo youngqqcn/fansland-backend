@@ -3,11 +3,6 @@ name = "fansland-backend"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-
-
 
 [[bin]]
 name ="api"
@@ -24,4 +19,13 @@ path ="src/ticket/main.rs"
 [[bin]]
 name ="email"
 path ="src/email/main.rs"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.7.4"
+serde = { version = "1.0.195", features = ["derive"] }
+tokio = { version = "1.35.1", features = ["full"] }
+
 
