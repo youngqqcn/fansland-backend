@@ -1,20 +1,10 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::Json,
-    routing::{get, post},
-    Router,
-};
+use axum::{extract::State, http::StatusCode, response::Json};
 
 use diesel::prelude::*;
-use std::net::SocketAddr;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-use dotenv::dotenv;
+// use std::net::SocketAddr;
+// use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::model::*;
-
-
 
 pub async fn create_user(
     State(pool): State<deadpool_diesel::postgres::Pool>,

@@ -1,20 +1,7 @@
-//! Run with
-//!
-//! ```not_rust
-//! cargo run -p example-diesel-postgres
-//! ```
-//!
-//! Checkout the [diesel webpage](https://diesel.rs) for
-//! longer guides about diesel
-//!
-//! Checkout the [crates.io source code](https://github.com/rust-lang/crates.io/)
-//! for a real world application using axum and diesel
-
 use axum::{
     routing::{get, post},
     Router,
 };
-use diesel::prelude::*;
 use std::net::SocketAddr;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

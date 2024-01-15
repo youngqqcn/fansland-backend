@@ -1,7 +1,5 @@
 use diesel::prelude::*;
 
-use crate::schema::*;
-
 diesel::table! {
     users (id) {
         id -> Int4,
@@ -23,4 +21,3 @@ pub struct NewUser {
     name: String,
     hair_color: Option<String>,
 }
-
