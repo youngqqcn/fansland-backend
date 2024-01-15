@@ -72,13 +72,13 @@ async fn main() {
         .unwrap();
 
     // run the migrations on server startup
-    {
-        let conn = pool.get().await.unwrap();
-        conn.interact(|conn| conn.run_pending_migrations(MIGRATIONS).map(|_| ()))
-            .await
-            .unwrap()
-            .unwrap();
-    }
+    // {
+    //     let conn = pool.get().await.unwrap();
+    //     conn.interact(|conn| conn.run_pending_migrations(MIGRATIONS).map(|_| ()))
+    //         .await
+    //         .unwrap()
+    //         .unwrap();
+    // }
 
     // build our application with some routes
     let app = Router::new()
