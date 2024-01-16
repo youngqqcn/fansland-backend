@@ -8,7 +8,7 @@ use tracing::Level;
 
 use dotenv::dotenv;
 
-use crate::handler::{bind_email, list_tickets, list_tickets_by_userid, list_users};
+use crate::handler::{bind_email, list_tickets, list_tickets_by_userid, query_user_by_address};
 
 pub mod handler;
 pub mod model;
@@ -40,8 +40,8 @@ async fn main() {
 
     // build our application with some routes
     let app = Router::new()
-        .route("/user/list", get(list_users))
-        .route("/user/bindEmail", post(bind_email))
+        .route("/address/:address", get(query_user_by_address))
+        .route("/address/bind", post(bind_email))
         .route("/tickets", get(list_tickets))
         .route("/tickets/:uid", get(list_tickets_by_userid))
         .with_state(pool);

@@ -22,8 +22,8 @@ fansland后端
   <!-- - `queryEventsInfo`: 查询活动信息 -->
 - 用户登录相关:
   - `loginByWallet`: 钱包登录
-  - `queryBindEmail`: 查询绑定邮箱
-  - `bindEmail`: 绑定邮箱
+  - `/address?`: 绑定邮箱
+  - `/address/bind`: 查询绑定邮箱
 - 门票相关:
   - `queryTickets`: 获取门票列表
   <!-- - `queryTicketQrCode`: 查询门票二维码 -->

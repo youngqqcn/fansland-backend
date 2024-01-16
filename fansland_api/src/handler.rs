@@ -1,5 +1,3 @@
-use std::net::TcpListener;
-
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -12,18 +10,23 @@ use diesel::prelude::*;
 
 use crate::{
     model::*,
-    schema::{tickets, users},
+    schema::{
+        tickets,
+        users::{self},
+    },
 };
 
 pub async fn bind_email(
     State(pool): State<deadpool_diesel::postgres::Pool>,
+    // Path(addr): Path<String>,
+    // Path(email): Path<String>,
     Json(new_user): Json<BindEmail>,
 ) -> Result<Json<User>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
     let res = conn
-        .interact(|conn| {
+        .interact(move |conn| {
             let xuser = CreateUser {
-                address: "xx".to_string(),
+                address: new_user.address,
                 email: new_user.email,
                 nonce: "noce".to_string(),
                 token: "token".to_string(),
@@ -33,6 +36,24 @@ pub async fn bind_email(
                 .values(xuser)
                 .returning(User::as_returning())
                 .get_result(conn)
+        })
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
+    Ok(Json(res))
+}
+
+pub async fn query_user_by_address(
+    Path(addr): Path<String>,
+    State(pool): State<deadpool_diesel::postgres::Pool>,
+    // Json(new_user): Json<NewUser>,
+) -> Result<Json<Vec<User>>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    // let uid = query_user_id;
+    let res = conn
+        .interact(move |conn| {
+            use crate::schema::users::dsl::*;
+            users.filter(address.eq(addr)).load(conn)
         })
         .await
         .map_err(internal_error)?
