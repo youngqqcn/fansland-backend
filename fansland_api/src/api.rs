@@ -27,3 +27,10 @@ pub struct LoginByAddressResp {
     pub success: bool,
     pub token: String, // token
 }
+
+// get wallet login nonce
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct GetLoginNonceResp {
+    pub address: String,
+    pub signmsg: String,
+}

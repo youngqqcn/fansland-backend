@@ -9,7 +9,7 @@ use tracing::Level;
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_login_nonce, list_tickets, list_tickets_by_userid, login_by_address,
+    bind_email, get_login_signmsg, list_tickets, list_tickets_by_userid, login_by_address,
     query_user_by_address,
 };
 
@@ -46,7 +46,7 @@ async fn main() {
     let app = Router::new()
         .route("/address/:address", get(query_user_by_address))
         .route("/address/bind", post(bind_email))
-        .route("/address/login/:address", get(get_login_nonce))
+        .route("/address/signmsg/:address", get(get_login_signmsg))
         .route("/address/login", post(login_by_address))
         .route("/tickets", get(list_tickets))
         .route("/tickets/:uid", get(list_tickets_by_userid))
