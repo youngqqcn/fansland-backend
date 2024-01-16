@@ -61,7 +61,6 @@ pub async fn get_login_signmsg(
         signmsg: msg_template.clone(),
     };
 
-    // let rand_nonce = "TODO";
     let res = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
@@ -85,15 +84,46 @@ pub async fn login_by_address(
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(login_req): Json<LoginByAddressReq>,
 ) -> Result<Json<LoginByAddressResp>, (StatusCode, String)> {
-    // TODO: 验证签名 + 消息
-    // 使用工具： https://arbiscan.io/verifiedSignatures#
+    let lrq = login_req.clone();
 
-    // verify_signature();
+    let conn = pool.get().await.map_err(internal_error)?;
+    // let uid = query_user_id;
+    let usrs: Vec<User> = conn
+        .interact(move |conn| {
+            use crate::schema::users::dsl::*;
+            users.filter(address.eq(login_req.address)).load(conn)
+        })
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
 
-    Ok(Json(LoginByAddressResp {
-        success: true,
-        token: "XXXXXXTOEKN".to_string(),
-    }))
+    tracing::debug!("len of usrs : {}", usrs.len());
+
+    if let Some(usr) = usrs.get(0) {
+        tracing::debug!("usr.address: {}, lrq.address:{}", usr.address, lrq.address);
+        if usr.address.eq(&lrq.address) {
+            tracing::debug!("usr.nonce: {}, lrq.msg:{}", usr.nonce, lrq.msg);
+            if usr.nonce.eq(&lrq.msg) {
+                // 验证签名 + 消息
+                if verify_signature(lrq.msg, lrq.sig, lrq.address) {
+                    // TODO: 生成token
+
+                    return Ok(Json(LoginByAddressResp {
+                        success: true,
+                        token: "ok-token-success".to_string(),
+                    }));
+                } else {
+                    return Err((StatusCode::BAD_REQUEST, "verify sig failed".to_string()));
+                }
+            } else {
+                return Err((StatusCode::BAD_REQUEST, "nonce not match".to_string()));
+            }
+        } else {
+            return Err((StatusCode::BAD_REQUEST, "address not match".to_string()));
+        }
+    } else {
+        Err((StatusCode::BAD_REQUEST, " user is empty".to_string()))
+    }
 }
 
 pub async fn query_user_by_address(
