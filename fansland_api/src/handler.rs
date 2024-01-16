@@ -9,7 +9,7 @@ use diesel::prelude::*;
 // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
-    api::{BindEmailReq, BindEmailResp},
+    api::{BindEmailReq, BindEmailResp, LoginByAddressReq, LoginByAddressResp},
     model::*,
     schema::{
         tickets::{self, user_id},
@@ -68,27 +68,14 @@ pub async fn get_login_nonce(
 // login_by_address
 pub async fn login_by_address(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(new_user): Json<BindEmailReq>,
-) -> Result<Json<BindEmailResp>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
-    let _ = conn
-        .interact(move |conn| {
-            let xuser = CreateUser {
-                address: new_user.address,
-                email: new_user.email,
-                nonce: "noce".to_string(),
-                token: "token".to_string(),
-            };
+    Json(login_req): Json<LoginByAddressReq>,
+) -> Result<Json<LoginByAddressResp>, (StatusCode, String)> {
+    // TODO: 验证签名 + 消息
 
-            diesel::insert_into(users::table)
-                .values(xuser)
-                .returning(User::as_returning())
-                .get_result(conn)
-        })
-        .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
-    Ok(Json(BindEmailResp { success: true }))
+    Ok(Json(LoginByAddressResp {
+        success: true,
+        token: "XXXXXXTOEKN".to_string(),
+    }))
 }
 
 pub async fn query_user_by_address(
