@@ -9,6 +9,7 @@ use diesel::prelude::*;
 // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
+    api::{BindEmailReq, BindEmailResp},
     model::*,
     schema::{
         tickets,
@@ -20,10 +21,10 @@ pub async fn bind_email(
     State(pool): State<deadpool_diesel::postgres::Pool>,
     // Path(addr): Path<String>,
     // Path(email): Path<String>,
-    Json(new_user): Json<BindEmail>,
-) -> Result<Json<User>, (StatusCode, String)> {
+    Json(new_user): Json<BindEmailReq>,
+) -> Result<Json<BindEmailResp>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    let res = conn
+    let _ = conn
         .interact(move |conn| {
             let xuser = CreateUser {
                 address: new_user.address,
@@ -40,7 +41,7 @@ pub async fn bind_email(
         .await
         .map_err(internal_error)?
         .map_err(internal_error)?;
-    Ok(Json(res))
+    Ok(Json(BindEmailResp { success: true }))
 }
 
 pub async fn query_user_by_address(

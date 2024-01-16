@@ -12,12 +12,7 @@ pub struct User {
     pub update_at: Option<NaiveDateTime>,
 }
 
-#[derive(serde::Deserialize, Clone)]
-pub struct BindEmail {
-    // pub id: i32,
-    pub address: String,
-    pub email: String,
-}
+
 
 #[derive(serde::Deserialize, Insertable, Clone)]
 #[diesel(table_name = users)]

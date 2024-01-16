@@ -13,6 +13,7 @@ use crate::handler::{bind_email, list_tickets, list_tickets_by_userid, query_use
 pub mod handler;
 pub mod model;
 pub mod schema;
+pub mod api;
 
 #[tokio::main]
 async fn main() {
