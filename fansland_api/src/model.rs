@@ -17,7 +17,7 @@ pub struct NewUser {
 }
 
 // ticket
-#[derive(serde::Serialize, Selectable, Queryable)]
+#[derive(serde::Serialize, Selectable, Queryable, Insertable, Debug)]
 pub struct Ticket {
     id: i32,
     user_id: i64,
@@ -30,5 +30,3 @@ pub struct Ticket {
     transfer_status: i32,
     update_at: Option<NaiveDateTime>,
 }
-
-

@@ -8,7 +8,7 @@ use tracing::Level;
 
 use dotenv::dotenv;
 
-use crate::handler::{create_user, list_tickets, list_users};
+use crate::handler::{create_user, list_tickets, list_tickets_by_userid, list_users};
 
 pub mod handler;
 pub mod model;
@@ -43,6 +43,7 @@ async fn main() {
         .route("/user/list", get(list_users))
         .route("/user/create", post(create_user))
         .route("/tickets", get(list_tickets))
+        .route("/tickets/:uid", get(list_tickets_by_userid))
         .with_state(pool);
 
     // run it with hyper

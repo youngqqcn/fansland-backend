@@ -9,3 +9,7 @@ diesel-migration-run:
 
 diesel-migration-redo:
 	diesel migration redo
+
+
+diesel-model:
+	cd fansland_api && diesel_ext
