@@ -19,7 +19,7 @@ fansland后端
 ## API
 
 - 活动相关:
-  - `queryEventsInfo`: 查询活动信息
+  <!-- - `queryEventsInfo`: 查询活动信息 -->
 - 用户登录相关:
   - `loginByWallet`: 钱包登录
   - `queryBindEmail`: 查询绑定邮箱

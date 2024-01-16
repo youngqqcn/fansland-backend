@@ -47,26 +47,26 @@ CREATE TABLE "users"(
 --     CONSTRAINT tb_ticket_type_pk PRIMARY KEY (id)
 -- );
 
--- CREATE TABLE tb_user_tickets (
---     id int8 NOT NULL,
---     ---comment "id",
---     user_id int8 not null,
---     ---comment "用户id",
---     chain_name varchar not null,
---     ---comment "链名称",
---     contract_address varchar not null,
---     ---comment "NFT合约地址",
---     nft_token_id int8 not null,
---     ---comment "NFT tokenid",
---     txhash varchar not null,
---     ---comment "transfer交易hash",
---     qrcode varchar NULL,
---     ---comment "二维码",
---     redeem_status int not null,
---     ---comment "核销状态: 0:未消耗, 1:已核销, 2:已过期",
---     transfer_status int not null,
---     ---comment "转移状态: 0:未转移， 1:已转移",
---     update_at timestamp(6) default current_timestamp,
---     ---comment "更新时间",
---     CONSTRAINT tb_user_tickets_pk PRIMARY KEY (id)
--- );
+CREATE TABLE tickets (
+    id SERIAL  NOT NULL,
+    ---comment "id",
+    user_id int8 not null,
+    ---comment "用户id",
+    chain_name varchar not null,
+    ---comment "链名称",
+    contract_address varchar not null,
+    ---comment "NFT合约地址",
+    nft_token_id int8 not null,
+    ---comment "NFT tokenid",
+    txhash varchar not null,
+    ---comment "transfer交易hash",
+    qrcode varchar NULL,
+    ---comment "二维码",
+    redeem_status int not null,
+    ---comment "核销状态: 0:未消耗, 1:已核销, 2:已过期",
+    transfer_status int not null,
+    ---comment "转移状态: 0:未转移， 1:已转移",
+    update_at timestamp(6) default current_timestamp,
+    ---comment "更新时间",
+    CONSTRAINT tb_user_tickets_pk PRIMARY KEY (id)
+);

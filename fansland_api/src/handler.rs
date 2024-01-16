@@ -1,10 +1,12 @@
+use std::net::TcpListener;
+
 use axum::{extract::State, http::StatusCode, response::Json};
 
 use diesel::prelude::*;
 // use std::net::SocketAddr;
 // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::model::*;
+use crate::{model::*, schema::{users, tickets}};
 
 pub async fn create_user(
     State(pool): State<deadpool_diesel::postgres::Pool>,
@@ -30,6 +32,19 @@ pub async fn list_users(
     let conn = pool.get().await.map_err(internal_error)?;
     let res = conn
         .interact(|conn| users::table.select(User::as_select()).load(conn))
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
+    Ok(Json(res))
+}
+
+// event
+pub async fn list_tickets(
+    State(pool): State<deadpool_diesel::postgres::Pool>,
+) -> Result<Json<Vec<Ticket>>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    let res = conn
+        .interact(|conn| tickets::table.select(Ticket::as_select()).load(conn))
         .await
         .map_err(internal_error)?
         .map_err(internal_error)?;

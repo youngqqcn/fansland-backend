@@ -12,8 +12,9 @@ edition = "2021"
 [dependencies]
 
 axum = { version = "0.7.4", features = ["macros"] }
+chrono = { version = "0.4.31", features = ["serde"] }
 deadpool-diesel = { version = "0.5.0", features = ["postgres"] }
-diesel = { version = "2", features = ["postgres"] }
+diesel = { version = "2", features = ["chrono", "postgres"] }
 diesel_migrations = "2"
 dotenv = "0.15.0"
 serde = { version = "1.0", features = ["derive"] }

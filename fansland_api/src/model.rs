@@ -1,12 +1,6 @@
+use super::schema::*;
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
-
-diesel::table! {
-    users (id) {
-        id -> Int4,
-        name -> Text,
-        hair_color -> Nullable<Text>,
-    }
-}
 
 #[derive(serde::Serialize, Selectable, Queryable)]
 pub struct User {
@@ -21,3 +15,20 @@ pub struct NewUser {
     name: String,
     hair_color: Option<String>,
 }
+
+// ticket
+#[derive(serde::Serialize, Selectable, Queryable)]
+pub struct Ticket {
+    id: i32,
+    user_id: i64,
+    chain_name: String,
+    contract_address: String,
+    nft_token_id: i64,
+    txhash: String,
+    qrcode: Option<String>,
+    redeem_status: i32,
+    transfer_status: i32,
+    update_at: Option<NaiveDateTime>,
+}
+
+

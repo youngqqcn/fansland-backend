@@ -1,5 +1,5 @@
 api:
-	cargo run --bin api
+	cargo run --bin fansland_api
 
 diesel-setup:
 	diesel setup
