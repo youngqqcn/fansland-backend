@@ -71,6 +71,7 @@ pub async fn login_by_address(
     Json(login_req): Json<LoginByAddressReq>,
 ) -> Result<Json<LoginByAddressResp>, (StatusCode, String)> {
     // TODO: 验证签名 + 消息
+    // 使用工具： https://arbiscan.io/verifiedSignatures#
 
     Ok(Json(LoginByAddressResp {
         success: true,
