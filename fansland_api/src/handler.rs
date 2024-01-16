@@ -12,15 +12,62 @@ use crate::{
     api::{BindEmailReq, BindEmailResp},
     model::*,
     schema::{
-        tickets,
+        tickets::{self, user_id},
         users::{self},
     },
 };
 
 pub async fn bind_email(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    // Path(addr): Path<String>,
-    // Path(email): Path<String>,
+    Json(new_user): Json<BindEmailReq>,
+) -> Result<Json<BindEmailResp>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    let _ = conn
+        .interact(move |conn| {
+            let xuser = CreateUser {
+                address: new_user.address,
+                email: new_user.email,
+                nonce: "noce".to_string(),
+                token: "token".to_string(),
+            };
+
+            diesel::insert_into(users::table)
+                .values(xuser)
+                .returning(User::as_returning())
+                .get_result(conn)
+        })
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
+    Ok(Json(BindEmailResp { success: true }))
+}
+
+// get login nonce
+// pub async fn get_login_nonce(
+pub async fn get_login_nonce(
+    Path(addr): Path<String>,
+    State(pool): State<deadpool_diesel::postgres::Pool>,
+) -> Result<String, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    let rand_nonce = "TODO";
+    let res = conn
+        .interact(move |conn| {
+            use crate::schema::users::dsl::*;
+            diesel::update(users)
+                .filter(address.eq(addr))
+                .set((nonce.eq(rand_nonce), token.eq("xxxxxxxxxxxxxxxxxxxx")))
+                .execute(conn)
+        })
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
+    tracing::debug!("res: {}", res);
+    Ok(rand_nonce.to_string())
+}
+
+// login_by_address
+pub async fn login_by_address(
+    State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(new_user): Json<BindEmailReq>,
 ) -> Result<Json<BindEmailResp>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;

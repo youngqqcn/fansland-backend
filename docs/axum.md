@@ -14,6 +14,7 @@ diesel migration run：迁移
 diesel migration revert：运行 down.sql
 diesel migration redo
 
+diesel 更新： https://github.com/diesel-rs/diesel/blob/master/examples/postgres/all_about_updates/src/lib.rs
 
 
 使用 diesel_ext 自动生成model
