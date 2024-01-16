@@ -1,27 +1,21 @@
 -- Your SQL goes here
 -- -- up.sql
-CREATE TABLE "users"(
-    "id" SERIAL PRIMARY KEY,
-    "name" TEXT NOT NULL,
-    "hair_color" TEXT
-);
--- CREATE TABLE tb_users (
---     id int8 NOT NULL,
---     ---comment "id",
---     "address" varchar NOT NULL,
---     ---comment "用户钱包",
---     email varchar NOT NULL,
---     ---comment "用户邮箱",
---     nonce varchar not null,
---     ---comment "登录nonce"
---     token varchar not null,
---     ---comment "登录token",
---     update_at timestamp(6) default current_timestamp,
---     ---comment "更新时间",
---     CONSTRAINT user_pk PRIMARY KEY (id),
---     CONSTRAINT uidx_address UNIQUE (address),
---     CONSTRAINT uidx_email UNIQUE (email)
+-- CREATE TABLE "users"(
+--     "id" SERIAL PRIMARY KEY,
+--     "name" TEXT NOT NULL,
+--     "hair_color" TEXT
 -- );
+CREATE TABLE users (
+    id SERIAL NOT NULL,
+    "address" varchar NOT NULL,
+    email varchar NOT NULL,
+    nonce varchar not null,
+    token varchar not null,
+    update_at timestamp(6) default current_timestamp,
+    CONSTRAINT user_pk PRIMARY KEY (id),
+    CONSTRAINT uidx_address UNIQUE (address),
+    CONSTRAINT uidx_email UNIQUE (email)
+);
 -- CREATE TABLE tb_events (
 --     id int8 NOT NULL,
 --     ---comment "id",
@@ -46,9 +40,8 @@ CREATE TABLE "users"(
 --     ---comment "合约中对应的typeid",
 --     CONSTRAINT tb_ticket_type_pk PRIMARY KEY (id)
 -- );
-
 CREATE TABLE tickets (
-    id SERIAL  NOT NULL,
+    id SERIAL NOT NULL,
     ---comment "id",
     user_id int8 not null,
     ---comment "用户id",
@@ -70,3 +63,51 @@ CREATE TABLE tickets (
     ---comment "更新时间",
     CONSTRAINT tb_user_tickets_pk PRIMARY KEY (id)
 );
+INSERT INTO public.tickets (
+        id,
+        user_id,
+        chain_name,
+        contract_address,
+        nft_token_id,
+        txhash,
+        qrcode,
+        redeem_status,
+        transfer_status,
+        update_at
+    )
+VALUES(
+        1,
+        1,
+        'polygon',
+        '0xaaaaaa',
+        1,
+        '0xaaaaaaaaa',
+        'skflsfdjlsf',
+        0,
+        0,
+        '2024-01-16 11:11:29.436'
+    );
+INSERT INTO public.tickets (
+        id,
+        user_id,
+        chain_name,
+        contract_address,
+        nft_token_id,
+        txhash,
+        qrcode,
+        redeem_status,
+        transfer_status,
+        update_at
+    )
+VALUES(
+        2,
+        2,
+        'eth',
+        '0xbbbb',
+        2,
+        '0xbbbb',
+        'sflsdfksdlfjl',
+        0,
+        0,
+        '2024-01-16 11:38:24.163'
+    );

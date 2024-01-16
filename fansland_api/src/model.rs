@@ -4,16 +4,30 @@ use diesel::prelude::*;
 
 #[derive(serde::Serialize, Selectable, Queryable)]
 pub struct User {
-    id: i32,
-    name: String,
-    hair_color: Option<String>,
+    pub id: i32,
+    pub address: String,
+    pub email: String,
+    pub nonce: String,
+    pub token: String,
+    pub update_at: Option<NaiveDateTime>,
 }
 
-#[derive(serde::Deserialize, Insertable)]
+#[derive(serde::Deserialize, Clone)]
+pub struct BindEmail {
+    // pub id: i32,
+    pub address: String,
+    pub email: String,
+}
+
+#[derive(serde::Deserialize, Insertable, Clone)]
 #[diesel(table_name = users)]
-pub struct NewUser {
-    name: String,
-    hair_color: Option<String>,
+pub struct CreateUser {
+    // pub id: i32,
+    pub address: String,
+    pub email: String,
+    pub nonce: String,
+    pub token: String,
+    // pub update_at: Option<NaiveDateTime>,
 }
 
 // ticket

@@ -1,6 +1,10 @@
 use std::net::TcpListener;
 
-use axum::{extract::{State, Path}, http::StatusCode, response::Json};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::Json,
+};
 
 use diesel::prelude::*;
 // use std::net::SocketAddr;
@@ -11,15 +15,22 @@ use crate::{
     schema::{tickets, users},
 };
 
-pub async fn create_user(
+pub async fn bind_email(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(new_user): Json<NewUser>,
+    Json(new_user): Json<BindEmail>,
 ) -> Result<Json<User>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
     let res = conn
         .interact(|conn| {
+            let xuser = CreateUser {
+                address: "xx".to_string(),
+                email: new_user.email,
+                nonce: "noce".to_string(),
+                token: "token".to_string(),
+            };
+
             diesel::insert_into(users::table)
-                .values(new_user)
+                .values(xuser)
                 .returning(User::as_returning())
                 .get_result(conn)
         })
@@ -63,7 +74,7 @@ pub async fn list_tickets_by_userid(
     let conn = pool.get().await.map_err(internal_error)?;
     // let uid = query_user_id;
     let res = conn
-        .interact(move |conn | {
+        .interact(move |conn| {
             use crate::schema::tickets::dsl::*;
             tickets.filter(user_id.eq(uid)).load(conn)
         })

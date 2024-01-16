@@ -18,8 +18,11 @@ diesel::table! {
 diesel::table! {
     users (id) {
         id -> Int4,
-        name -> Text,
-        hair_color -> Nullable<Text>,
+        address -> Varchar,
+        email -> Varchar,
+        nonce -> Varchar,
+        token -> Varchar,
+        update_at -> Nullable<Timestamp>,
     }
 }
 
