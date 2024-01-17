@@ -24,6 +24,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 redis = { version = "0.24.0", features = ["tokio-comp"] }
+redis_pool = "0.3"
 
 fansland_sign = { path = "../fansland_sign" }
 fansland_common = { path = "../fansland_common" }

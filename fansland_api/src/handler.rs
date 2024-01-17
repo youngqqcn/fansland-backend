@@ -8,6 +8,7 @@ use fansland_common::RespVO;
 use fansland_sign::verify_signature;
 
 use diesel::prelude::*;
+use redis_pool::RedisPool;
 use tracing::warn;
 
 use crate::{
@@ -19,12 +20,26 @@ use crate::{
     model::*,
     schema::users::{self},
 };
+use deadpool_diesel::{Manager, Pool};
+use diesel::PgConnection;
+// use fansland_common::RespVO;
+use redis::{aio::Connection, Client};
+
+#[derive(Clone)]
+pub struct AppState {
+    pub psql_pool: Pool<Manager<PgConnection>>,
+    pub rds_pool: RedisPool<Client, Connection>,
+}
 
 pub async fn bind_email(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(app_state): State<AppState>,
     JsonReq(req): JsonReq<BindEmailReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let conn = pool.get().await.map_err(new_internal_error)?;
+    let conn = app_state
+        .psql_pool
+        .get()
+        .await
+        .map_err(new_internal_error)?;
     let _ = conn
         .interact(move |conn| {
             // TODO: 判断地址是否存在？
@@ -50,10 +65,14 @@ pub async fn bind_email(
 // get login nonce
 // pub async fn get_login_nonce(
 pub async fn get_login_signmsg(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let conn = pool.get().await.map_err(new_internal_error)?;
+    let conn = app_state
+        .psql_pool
+        .get()
+        .await
+        .map_err(new_internal_error)?;
     let msg_template = format!("https://fansland.io wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland! This request will NOT trigger a blockchain transaction or cost any gas fees.\n\nURI: https://fansland.io\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
         req.address,
         56, // chainId
@@ -91,12 +110,16 @@ pub async fn get_login_signmsg(
 
 // 钱包登录
 pub async fn sign_in_with_ethereum(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(app_state): State<AppState>,
     JsonReq(login_req): JsonReq<LoginByAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let lrq = login_req.clone();
 
-    let conn = pool.get().await.map_err(new_internal_error)?;
+    let conn = app_state
+        .psql_pool
+        .get()
+        .await
+        .map_err(new_internal_error)?;
     // let uid = query_user_id;
     let usrs: Vec<User> = conn
         .interact(move |conn| {
@@ -143,10 +166,14 @@ pub async fn sign_in_with_ethereum(
 }
 
 pub async fn query_user_by_address(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let conn = pool.get().await.map_err(new_internal_error)?;
+    let conn = app_state
+        .psql_pool
+        .get()
+        .await
+        .map_err(new_internal_error)?;
     let res: Vec<User> = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
@@ -162,10 +189,14 @@ pub async fn query_user_by_address(
 // list tickets
 pub async fn query_tickets_by_address(
     // Path(addr): Path<String>,
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let conn = pool.get().await.map_err(new_internal_error)?;
+    let conn = app_state
+        .psql_pool
+        .get()
+        .await
+        .map_err(new_internal_error)?;
     //TODO: 在中间件中校验token的合法性
 
     // 获取该用户所有的票
@@ -183,10 +214,14 @@ pub async fn query_tickets_by_address(
 
 // list tickets by secret link
 pub async fn get_tickets_by_secret_link(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(app_state): State<AppState>,
     JsonReq(secret_token_req): JsonReq<GetTicketsBySecretToken>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let conn = pool.get().await.map_err(new_internal_error)?;
+    let conn = app_state
+        .psql_pool
+        .get()
+        .await
+        .map_err(new_internal_error)?;
     let req = secret_token_req.clone();
 
     // 查询用户
@@ -226,10 +261,14 @@ pub async fn get_tickets_by_secret_link(
 
 // 更新密码
 pub async fn update_secret_link_passwd(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
+    State(app_state): State<AppState>,
     JsonReq(update_req): JsonReq<UpdateSecretLinkPasswdReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let conn = pool.get().await.map_err(new_internal_error)?;
+    let conn = app_state
+        .psql_pool
+        .get()
+        .await
+        .map_err(new_internal_error)?;
     let req = update_req.clone();
 
     // 查询用户私密链接密码
