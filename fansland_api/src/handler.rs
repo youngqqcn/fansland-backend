@@ -86,6 +86,19 @@ pub async fn get_login_signmsg(
 
     // TODO: 查询数据库, 判断地址是否存在，如果存在则更新，否则插入数据
     // TODO: 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
+        .await
+        .map_err(new_internal_error)?;
+
+    // 设置
+    let _: () = redis::pipe()
+        .set(req.address.clone(), msg_template.clone())
+        .ignore()
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?;
 
     // 更新数据库
     let res = conn
