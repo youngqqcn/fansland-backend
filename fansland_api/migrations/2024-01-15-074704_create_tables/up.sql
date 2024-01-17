@@ -15,7 +15,8 @@ CREATE TABLE users (
 );
 INSERT INTO public.users
 (id, user_address, email, nonce, "token", passwd, update_at)
-VALUES(1, '0xaaaa', 'youngqqcn@gmail.com', '1234', 'happy', '6666', '2024-01-17 10:49:12.776');
+VALUES(1, '0xbfe5f435389ca190c3d3dec351db0ee9a8657a53', 'youngqqcn@gmail.com', '1234', 'happy', '6666', '2024-01-17 10:49:12.776');
+
 
 CREATE TABLE tickets (
     id SERIAL NOT NULL,

@@ -51,19 +51,23 @@ pub async fn bind_email(
 pub async fn get_login_signmsg(
     Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
-) -> Result<Json<GetLoginNonceResp>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let conn = pool.get().await.map_err(new_internal_error)?;
     let msg_template = format!("https://fansland.io wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland! This request will NOT trigger a blockchain transaction or cost any gas fees.\n\nURI: https://fansland.io\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
         addr,
         56, // chainId
-        "test-nonce", //nonce
-        "test-timestamp" // timestamp
+        "test-nonce", //TODO: nonce
+        "test-timestamp" //TODO: timestamp,
     );
     let rsp = GetLoginNonceResp {
         address: addr.clone(),
         signmsg: msg_template.clone(),
     };
 
+    // TODO: 查询数据库, 判断地址是否存在，如果存在则更新，否则插入数据
+    // TODO: 使用redis
+
+    // 更新数据库
     let res = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
@@ -71,19 +75,21 @@ pub async fn get_login_signmsg(
                 .filter(user_address.eq(addr))
                 .set((
                     nonce.eq(msg_template.clone()),
-                    token.eq("xxxxxxxxxxxxxxxxxxxx"),
+                    token.eq("xxxxxxxxxxxxxxxxxxxx"), // TODO: token
                 ))
                 .execute(conn)
         })
         .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
+        .map_err(new_internal_error)?
+        .map_err(new_internal_error)?;
+
     tracing::debug!("res: {}", res);
-    Ok(Json(rsp))
+
+    Ok(RespVO::from(&rsp).resp_json())
 }
 
-// login_by_address
-pub async fn login_by_address(
+// 钱包登录
+pub async fn sign_in_with_ethereum(
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(login_req): Json<LoginByAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
