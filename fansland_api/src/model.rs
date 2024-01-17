@@ -1,8 +1,9 @@
 use super::schema::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
+use serde::Deserialize;
 
-#[derive(serde::Serialize, Selectable, Queryable)]
+#[derive(serde::Serialize, Selectable, Queryable, Clone, Deserialize, Debug)]
 pub struct User {
     pub id: i32,
     pub user_address: String,
@@ -25,7 +26,8 @@ pub struct CreateUser {
 }
 
 // ticket
-#[derive(serde::Serialize, Selectable, Queryable, Insertable, Debug, Clone)]
+// #[derive(serde::Serialize, Selectable, Queryable, Insertable, Debug, Clone)]
+#[derive(serde::Serialize, Selectable, Queryable, Insertable, Clone, Deserialize, Debug)]
 pub struct Ticket {
     pub id: i32,
     pub user_id: i64,

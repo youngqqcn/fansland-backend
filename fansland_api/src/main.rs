@@ -1,6 +1,5 @@
 use axum::{
     http::{StatusCode, Uri},
-    response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };

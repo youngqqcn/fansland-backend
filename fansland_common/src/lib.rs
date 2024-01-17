@@ -23,7 +23,7 @@ where
         if arg.is_ok() {
             Self {
                 code: Some(CODE_SUCCESS),
-                msg: None,
+                msg: Some("ok".to_owned()),
                 data: arg.clone().ok(),
             }
         } else {
@@ -38,7 +38,7 @@ where
     pub fn from(arg: &T) -> Self {
         Self {
             code: Some(CODE_SUCCESS),
-            msg: None,
+            msg: Some("ok".to_owned()),
             data: Some(arg.clone()),
         }
     }

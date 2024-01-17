@@ -1,11 +1,14 @@
 use axum::{
+    body::Body,
     extract::{Path, State},
     http::StatusCode,
-    response::Json,
+    response::{Json, Response},
 };
+use fansland_common::RespVO;
 use fansland_sign::verify_signature;
 
 use diesel::prelude::*;
+use tracing::warn;
 // use std::net::SocketAddr;
 // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -15,10 +18,7 @@ use crate::{
         LoginByAddressResp, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
     },
     model::*,
-    schema::{
-        tickets::{self},
-        users::{self},
-    },
+    schema::users::{self},
 };
 
 pub async fn bind_email(
@@ -133,22 +133,40 @@ pub async fn login_by_address(
     }
 }
 
+// pub async fn query_user_by_address(
+//     Path(addr): Path<String>,
+//     State(pool): State<deadpool_diesel::postgres::Pool>,
+//     // Json(new_user): Json<NewUser>,
+// ) -> Result<Json<Vec<User>>, (StatusCode, String)> {
+//     let conn = pool.get().await.map_err(internal_error)?;
+//     // let uid = query_user_id;
+//     let res = conn
+//         .interact(move |conn| {
+//             use crate::schema::users::dsl::*;
+//             users.filter(user_address.eq(addr)).load(conn)
+//         })
+//         .await
+//         .map_err(internal_error)?
+//         .map_err(internal_error)?;
+//     Ok(Json(res))
+// }
+
 pub async fn query_user_by_address(
     Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    // Json(new_user): Json<NewUser>,
-) -> Result<Json<Vec<User>>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
-    // let uid = query_user_id;
-    let res = conn
+    // ) -> Result<Json<RespVO<Vec<User>>>, (StatusCode, Json<RespVO<String>>)> {
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let conn = pool.get().await.map_err(new_internal_error)?;
+    let res: Vec<User> = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
             users.filter(user_address.eq(addr)).load(conn)
         })
         .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
-    Ok(Json(res))
+        .map_err(new_internal_error)?
+        .map_err(new_internal_error)?;
+
+    Ok(RespVO::from(&res).resp_json())
 }
 
 pub async fn list_users(
@@ -259,4 +277,20 @@ where
     E: std::error::Error,
 {
     (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+}
+
+fn new_internal_error<E>(err: E) -> (StatusCode, Json<RespVO<String>>)
+where
+    E: std::error::Error,
+{
+    let msg = format!("INTERNAL_SERVER_ERROR: {}", err.to_string());
+    warn!("{}", msg.clone());
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(RespVO::<String> {
+            code: Some(-1),
+            msg: Some(msg),
+            data: None,
+        }),
+    )
 }
