@@ -25,7 +25,7 @@ fansland后端
   - `/address?`: 绑定邮箱
   - `/address/bind`: 查询绑定邮箱
 - 门票相关:
-  - `queryTickets`: 获取门票列表
+  - `queryTickets`: 获取当前门票
   <!-- - `queryTicketQrCode`: 查询门票二维码 -->
   - `setSecretLinkPassword`: 设置私密链接密码
   - `secretLink`: 私密链接访问我的门票

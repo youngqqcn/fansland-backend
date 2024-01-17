@@ -12,6 +12,11 @@ diesel::table! {
         qrcode -> Nullable<Varchar>,
         redeem_status -> Int4,
         transfer_status -> Int4,
+        ticket_type_id -> Int4,
+        ticket_type_name -> Varchar,
+        ticket_price -> Int4,
+        event_name -> Varchar,
+        event_time -> Varchar,
         update_at -> Nullable<Timestamp>,
     }
 }

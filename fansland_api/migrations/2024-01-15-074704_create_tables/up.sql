@@ -1,10 +1,6 @@
 -- Your SQL goes here
 -- -- up.sql
--- CREATE TABLE "users"(
---     "id" SERIAL PRIMARY KEY,
---     "name" TEXT NOT NULL,
---     "hair_color" TEXT
--- );
+
 CREATE TABLE users (
     id SERIAL NOT NULL,
     user_address varchar NOT NULL,
@@ -17,30 +13,10 @@ CREATE TABLE users (
     CONSTRAINT uidx_address UNIQUE (user_address),
     CONSTRAINT uidx_email UNIQUE (email)
 );
--- CREATE TABLE tb_events (
---     id int8 NOT NULL,
---     ---comment "id",
---     ev_name varchar NULL,
---     ---comment "活动名称",
---     ev_desc varchar NULL,
---     ---comment "活动描述",
---     ev_banner_img_url varchar NULL,
---     ---comment "图片链接",
---     contract_address varchar NULL,
---     ---comment "合约地址",
---     CONSTRAINT tb_event_pk PRIMARY KEY (id)
--- );
--- CREATE TABLE tb_ticket_types (
---     id int8 NOT NULL,
---     ---comment "id",
---     "name" varchar NOT NULL,
---     ---comment "类型名",
---     price int4 NOT NULL,
---     ---comment "价格",
---     contract_type_id int4 NOT NULL,
---     ---comment "合约中对应的typeid",
---     CONSTRAINT tb_ticket_type_pk PRIMARY KEY (id)
--- );
+INSERT INTO public.users
+(id, user_address, email, nonce, "token", passwd, update_at)
+VALUES(1, '0xaaaa', 'youngqqcn@gmail.com', '1234', 'happy', '6666', '2024-01-17 10:49:12.776');
+
 CREATE TABLE tickets (
     id SERIAL NOT NULL,
     user_id int8 not null,
@@ -52,9 +28,19 @@ CREATE TABLE tickets (
     qrcode varchar NULL,
     redeem_status int not null,
     transfer_status int not null,
+    ticket_type_id int4 not null,
+    ticket_type_name varchar not null,
+    ticket_price int4 not null,
+    event_name varchar not null,
+    event_time varchar not null,
     update_at timestamp(6) default current_timestamp,
-    CONSTRAINT tb_user_tickets_pk PRIMARY KEY (id)
+    CONSTRAINT tb_user_tickets_pk PRIMARY KEY (id),
+    CONSTRAINT uidx_contract_tokenid UNIQUE (contract_address, nft_token_id)
 );
+CREATE INDEX idx_user_address ON tickets USING btree (user_address);
+
+
+
 INSERT INTO public.tickets (
         id,
         user_id,
@@ -66,6 +52,11 @@ INSERT INTO public.tickets (
         qrcode,
         redeem_status,
         transfer_status,
+        ticket_type_id,
+        ticket_type_name,
+        ticket_price,
+        event_name,
+        event_time,
         update_at
     )
 VALUES(
@@ -79,6 +70,11 @@ VALUES(
         'skflsfdjlsf',
         0,
         0,
+        0,
+        '3 Days Ticket',
+        9900,
+        'Fansland Web3 Music Festival 2024 Thailand Bangkok',
+        '4-6 May 2024',
         '2024-01-16 11:11:29.436'
     );
 INSERT INTO public.tickets (
@@ -92,6 +88,11 @@ INSERT INTO public.tickets (
         qrcode,
         redeem_status,
         transfer_status,
+        ticket_type_id,
+        ticket_type_name,
+        ticket_price,
+        event_name,
+        event_time,
         update_at
     )
 VALUES(
@@ -105,5 +106,10 @@ VALUES(
         'sflsdfksdlfjl',
         0,
         0,
+        0,
+        '2 Days Ticket',
+        9900,
+        'Fansland Web3 Music Festival 2024 Thailand Bangkok',
+        '4-6 May 2024',
         '2024-01-16 11:38:24.163'
     );

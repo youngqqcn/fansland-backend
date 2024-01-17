@@ -9,8 +9,8 @@ use tracing::Level;
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_login_signmsg, get_tickets_by_secret_link, list_tickets, login_by_address,
-    query_user_by_address, update_secret_link_passwd,
+    bind_email, get_login_signmsg, get_tickets_by_address, get_tickets_by_secret_link,
+    login_by_address, query_user_by_address, update_secret_link_passwd,
 };
 
 pub mod api;
@@ -44,12 +44,11 @@ async fn main() {
 
     // build our application with some routes
     let app = Router::new()
+        .route("/siwe/msg/:address", get(get_login_signmsg))
+        .route("/siwe/signin", post(login_by_address))
         .route("/address/:address", get(query_user_by_address))
-        .route("/address/bind", post(bind_email))
-        .route("/address/signmsg/:address", get(get_login_signmsg))
-        .route("/address/login", post(login_by_address))
-        .route("/address/tickets", get(list_tickets))
-        // .route("/address/tickets/:uid", get(list_tickets_by_userid))
+        .route("/address/bindemail", post(bind_email))
+        .route("/address/tickets/:address", get(get_tickets_by_address))
         .route("/address/slink", post(get_tickets_by_secret_link))
         .route(
             "/address/updateslinkpasswd",

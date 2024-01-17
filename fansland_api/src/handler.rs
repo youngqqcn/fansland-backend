@@ -164,21 +164,28 @@ pub async fn list_users(
 }
 
 // list tickets
-pub async fn list_tickets(
+pub async fn get_tickets_by_address(
+    Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
 ) -> Result<Json<Vec<Ticket>>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    let res = conn
-        .interact(|conn| tickets::table.select(Ticket::as_select()).load(conn))
+    //TODO: 在中间件中校验token的合法性
+
+    // 获取该用户所有的票
+    let ret: Vec<Ticket> = conn
+        .interact(move |conn| {
+            use crate::schema::tickets::dsl::*;
+            tickets.filter(user_address.eq(addr)).load(conn)
+        })
         .await
         .map_err(internal_error)?
         .map_err(internal_error)?;
-    Ok(Json(res))
+
+    return Ok(Json(ret));
 }
 
-// list tickets by userid
+// list tickets by secret link
 pub async fn get_tickets_by_secret_link(
-    // Path(uid): Path<i64>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(secret_token_req): Json<GetTicketsBySecretToken>,
 ) -> Result<Json<Vec<Ticket>>, (StatusCode, String)> {

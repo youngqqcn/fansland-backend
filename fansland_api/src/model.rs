@@ -37,5 +37,10 @@ pub struct Ticket {
     pub qrcode: Option<String>,
     pub redeem_status: i32,
     pub transfer_status: i32,
+    pub ticket_type_id: i32,
+    pub ticket_type_name: String,
+    pub ticket_price: i32,
+    pub event_name: String,
+    pub event_time: String,
     pub update_at: Option<NaiveDateTime>,
 }
