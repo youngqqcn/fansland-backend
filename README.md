@@ -18,17 +18,17 @@ fansland后端
 
 ## API
 
-- 活动相关:
-  <!-- - `queryEventsInfo`: 查询活动信息 -->
-- 用户登录相关:
-  - `/address/login`: 钱包登录
-  - `/address?`: 绑定邮箱
-  - `/address/bind`: 查询绑定邮箱
-- 门票相关:
-  - `queryTickets`: 获取当前门票
-  <!-- - `queryTicketQrCode`: 查询门票二维码 -->
-  - `setSecretLinkPassword`: 设置私密链接密码
-  - `secretLink`: 私密链接访问我的门票
+- 有鉴权
+  - POST 绑定用户邮箱：/address/bindemail
+  - GET 查询用户信息: /address/{address}
+  - GET 查询用户门票列表：/address/tickets/{address}
+  - POST 更新用户私密链接密码：updateslinkpasswd
+- 无鉴权
+  - POST 私密链接查询用户门票列表：/address/slink
+  - GET 获取钱包登录签名消息：/siwe/msg/{address}
+  - POST 钱包登录：/siwe/signin
+
+
 
 
 ## nft模块
