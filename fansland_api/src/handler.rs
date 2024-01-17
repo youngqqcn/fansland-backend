@@ -1,12 +1,9 @@
-use core::fmt;
-
 use axum::{
     body::Body,
     extract::{Path, State},
     http::StatusCode,
     response::{Json, Response},
 };
-use deadpool_diesel::Error;
 use fansland_common::RespVO;
 use fansland_sign::verify_signature;
 
@@ -234,8 +231,8 @@ pub async fn get_tickets_by_secret_link(
 pub async fn update_secret_link_passwd(
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(update_req): Json<UpdateSecretLinkPasswdReq>,
-) -> Result<Json<UpdateSecretLinkPasswdResp>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let conn = pool.get().await.map_err(new_internal_error)?;
     let req = update_req.clone();
 
     // 查询用户私密链接密码
@@ -248,11 +245,16 @@ pub async fn update_secret_link_passwd(
                 .execute(conn)
         })
         .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
+        .map_err(new_internal_error)?
+        .map_err(new_internal_error)?;
 
-    Ok(Json(UpdateSecretLinkPasswdResp { success: true }))
-    // return Err((StatusCode::BAD_REQUEST, "invalid".to_string()));
+    // TODO: create new token
+    let new_token = "new token".to_string();
+    Ok(RespVO::from(&UpdateSecretLinkPasswdResp {
+        success: true,
+        secret_token: new_token,
+    })
+    .resp_json())
 }
 
 /// Utility function for mapping any error into a `500 Internal Server Error`

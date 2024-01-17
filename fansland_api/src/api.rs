@@ -52,4 +52,5 @@ pub struct UpdateSecretLinkPasswdReq {
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct UpdateSecretLinkPasswdResp {
     pub success: bool,
+    pub secret_token: String,
 }
