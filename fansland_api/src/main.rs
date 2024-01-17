@@ -1,9 +1,12 @@
 use axum::{
+    http::{StatusCode, Uri},
+    response::IntoResponse,
     routing::{get, post},
-    Router,
+    Json, Router,
 };
+use fansland_common::RespVO;
 use std::net::SocketAddr;
-use tracing::Level;
+use tracing::{warn, Level};
 // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use dotenv::dotenv;
@@ -54,6 +57,7 @@ async fn main() {
             "/address/updateslinkpasswd",
             post(update_secret_link_passwd),
         )
+        .fallback(fallback)
         .with_state(pool);
 
     // run it with hyper
@@ -62,3 +66,27 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
+
+// 处理链接不存在的情况
+async fn fallback(uri: Uri) -> Result<String, (StatusCode, Json<RespVO<String>>)> {
+    let msg = format!("NOT FOUND: {}", uri);
+    warn!("{}", msg.clone());
+    Err((
+        StatusCode::NOT_FOUND,
+        Json(RespVO::<String> {
+            code: Some(-1),
+            msg: Some(msg),
+            data: None,
+        }),
+    ))
+}
+// async fn fallback(uri: Uri) -> impl IntoResponse {
+//     let msg = format!("not found: {}", uri);
+//     warn!("{}", msg.clone());
+//     RespVO::<String> {
+//         code: Some(-1),
+//         msg: Some(msg),
+//         data: None,
+//     }
+//     .resp_json()
+// }
