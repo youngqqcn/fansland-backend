@@ -20,3 +20,8 @@ diesel 更新： https://github.com/diesel-rs/diesel/blob/master/examples/postgr
 使用 diesel_ext 自动生成model
 
 https://github.com/abbychau/diesel_cli_ext
+
+
+
+axum中使用redis 异步： https://www.cnblogs.com/pythonClub/p/17804729.html
+axum使用AppState: https://www.cnblogs.com/pythonClub/p/17804713.html

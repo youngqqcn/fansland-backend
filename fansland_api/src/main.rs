@@ -7,6 +7,7 @@ use axum::{
     Json, Router,
 };
 use fansland_common::RespVO;
+use redis::{AsyncCommands, Client};
 use std::net::SocketAddr;
 use tracing::{warn, Level};
 
@@ -47,6 +48,16 @@ async fn main() {
         .build()
         .unwrap();
 
+    // let client = Client::open("REDIS_URL").unwrap();
+    // let conn = client.get_async_connection().await.unwrap();
+    // conn.set("hello", "world")
+    //     .await
+    //     .map_err(|err| err.to_string())?;
+    match get_test().await {
+        Ok(value) => println!("xxx"),
+        Err(error) => tracing::error!("redis error:{}", error),
+    }
+
     // build our application with some routes
     let need_auth_routers = Router::new()
         .route("/queryAddress", post(query_user_by_address))
@@ -70,6 +81,22 @@ async fn main() {
     tracing::debug!("listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app_routers).await.unwrap();
+}
+
+async fn get_test() -> Result<String, String> {
+    tracing::debug!("===============测试redis================");
+    let rds_url = std::env::var("REDIS_URL").unwrap();
+    tracing::debug!("rds_url: {}", rds_url);
+    let client = Client::open(rds_url).unwrap();
+    // let conn = client.get_async_connection().await.unwrap();
+    let mut conn = client
+        .get_async_connection()
+        .await
+        .map_err(|err| err.to_string())?;
+    conn.set("author", "axum.rs")
+        .await
+        .map_err(|err| err.to_string())?;
+    Ok("Successfully set".to_owned())
 }
 
 // 处理链接不存在的情况
