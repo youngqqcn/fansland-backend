@@ -22,6 +22,7 @@ pub mod api;
 pub mod handler;
 pub mod model;
 pub mod schema;
+mod extract;
 
 #[tokio::main]
 async fn main() {
@@ -48,18 +49,26 @@ async fn main() {
         .unwrap();
 
     // build our application with some routes
-    let app = Router::new()
-        .route("/siwe/msg/:address", get(get_login_signmsg))
-        .route("/siwe/signin", post(sign_in_with_ethereum))
+    let need_auth_routers = Router::new()
+        // .route("/siwe/msg/:address", get(get_login_signmsg))
+        // .route("/siwe/signin", post(sign_in_with_ethereum))
         .route("/address/:address", get(query_user_by_address))
         .route("/address/bindemail", post(bind_email))
         .route("/address/tickets/:address", get(get_tickets_by_address))
-        .route("/address/slink", post(get_tickets_by_secret_link))
+        // .route("/address/slink", post(get_tickets_by_secret_link))
         .route(
             "/address/updateslinkpasswd",
             post(update_secret_link_passwd),
         )
-        .layer(middleware::from_fn(print_request_body))
+        .layer(middleware::from_fn(print_request_body));
+
+    let noneed_auth_routers = Router::new()
+        .route("/address/slink", post(get_tickets_by_secret_link))
+        .route("/siwe/msg/:address", get(get_login_signmsg))
+        .route("/siwe/signin", post(sign_in_with_ethereum));
+
+    let app_routers = need_auth_routers
+        .merge(noneed_auth_routers)
         .fallback(fallback)
         .with_state(pool);
 
@@ -67,7 +76,7 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     tracing::debug!("listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app_routers).await.unwrap();
 }
 
 // 处理链接不存在的情况
@@ -99,6 +108,7 @@ async fn fallback(uri: Uri) -> Result<String, (StatusCode, Json<RespVO<String>>)
 // middleware that shows how to consume the request body upfront
 async fn print_request_body(request: Request, next: Next) -> Result<impl IntoResponse, Response> {
     // let request = buffer_request_body(request).await?;
+    tracing::debug!("==========需要鉴权接口===========");
 
     let hs = request.headers();
     for (name, value) in hs.iter() {
@@ -107,3 +117,9 @@ async fn print_request_body(request: Request, next: Next) -> Result<impl IntoRes
     // tracing::debug!("{}", request.headers());
     Ok(next.run(request).await)
 }
+
+
+// pub struct AppState {
+//     pub pool: Pool<Manager<PgConnection>>,
+//     pub rdc: redis::Client,
+// }

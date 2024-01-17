@@ -15,13 +15,14 @@ use crate::{
         BindEmailReq, BindEmailResp, GetLoginNonceResp, GetTicketsBySecretToken, LoginByAddressReq,
         LoginByAddressResp, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
     },
+    extract::JsonReq,
     model::*,
     schema::users::{self},
 };
 
 pub async fn bind_email(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(req): Json<BindEmailReq>,
+    JsonReq(req): JsonReq<BindEmailReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let conn = pool.get().await.map_err(new_internal_error)?;
     let _ = conn
@@ -91,7 +92,7 @@ pub async fn get_login_signmsg(
 // 钱包登录
 pub async fn sign_in_with_ethereum(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(login_req): Json<LoginByAddressReq>,
+    JsonReq(login_req): JsonReq<LoginByAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let lrq = login_req.clone();
 
@@ -182,7 +183,7 @@ pub async fn get_tickets_by_address(
 // list tickets by secret link
 pub async fn get_tickets_by_secret_link(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(secret_token_req): Json<GetTicketsBySecretToken>,
+    JsonReq(secret_token_req): JsonReq<GetTicketsBySecretToken>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let conn = pool.get().await.map_err(new_internal_error)?;
     let req = secret_token_req.clone();
@@ -225,7 +226,7 @@ pub async fn get_tickets_by_secret_link(
 // 更新密码
 pub async fn update_secret_link_passwd(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(update_req): Json<UpdateSecretLinkPasswdReq>,
+    JsonReq(update_req): JsonReq<UpdateSecretLinkPasswdReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let conn = pool.get().await.map_err(new_internal_error)?;
     let req = update_req.clone();
