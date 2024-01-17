@@ -9,8 +9,6 @@ use fansland_sign::verify_signature;
 
 use diesel::prelude::*;
 use tracing::warn;
-// use std::net::SocketAddr;
-// use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
     api::{
@@ -24,10 +22,12 @@ use crate::{
 pub async fn bind_email(
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(req): Json<BindEmailReq>,
-) -> Result<Json<BindEmailResp>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let conn = pool.get().await.map_err(new_internal_error)?;
     let _ = conn
         .interact(move |conn| {
+            // TODO: 判断地址是否存在？
+            // TODO: 判断邮箱是否存在
             let xuser = CreateUser {
                 user_address: req.address,
                 email: req.email,
@@ -41,9 +41,9 @@ pub async fn bind_email(
                 .get_result(conn)
         })
         .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
-    Ok(Json(BindEmailResp { success: true }))
+        .map_err(new_internal_error)?
+        .map_err(new_internal_error)?;
+    Ok(RespVO::from(&BindEmailResp { success: true }).resp_json())
 }
 
 // get login nonce
@@ -250,15 +250,6 @@ pub async fn update_secret_link_passwd(
         secret_token: new_token,
     })
     .resp_json())
-}
-
-/// Utility function for mapping any error into a `500 Internal Server Error`
-/// response.
-fn internal_error<E>(err: E) -> (StatusCode, String)
-where
-    E: std::error::Error,
-{
-    (StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
 }
 
 fn new_internal_error<E>(err: E) -> (StatusCode, Json<RespVO<String>>)
