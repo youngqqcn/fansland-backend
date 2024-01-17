@@ -12,12 +12,12 @@ use diesel::prelude::*;
 use crate::{
     api::{
         BindEmailReq, BindEmailResp, GetLoginNonceResp, GetTicketsBySecretToken, LoginByAddressReq,
-        LoginByAddressResp,
+        LoginByAddressResp, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
     },
     model::*,
     schema::{
-        tickets::{self, user_id},
-        users::{self, user_address},
+        tickets::{self},
+        users::{self},
     },
 };
 
@@ -177,13 +177,13 @@ pub async fn list_tickets(
 }
 
 // list tickets by userid
-pub async fn get_tickets_by_secret_token(
+pub async fn get_tickets_by_secret_link(
     // Path(uid): Path<i64>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(secret_token_req): Json<GetTicketsBySecretToken>,
 ) -> Result<Json<Vec<Ticket>>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    let req: GetTicketsBySecretToken = secret_token_req.clone();
+    let req = secret_token_req.clone();
 
     // 查询用户
     let res: Vec<User> = conn
@@ -218,6 +218,31 @@ pub async fn get_tickets_by_secret_token(
     }
 
     return Err((StatusCode::BAD_REQUEST, "invalid".to_string()));
+}
+
+// 更新密码
+pub async fn update_secret_link_passwd(
+    State(pool): State<deadpool_diesel::postgres::Pool>,
+    Json(update_req): Json<UpdateSecretLinkPasswdReq>,
+) -> Result<Json<UpdateSecretLinkPasswdResp>, (StatusCode, String)> {
+    let conn = pool.get().await.map_err(internal_error)?;
+    let req = update_req.clone();
+
+    // 查询用户私密链接密码
+    let _res = conn
+        .interact(|conn| {
+            use crate::schema::users::dsl::*;
+            diesel::update(users)
+                .filter(user_address.eq(req.address))
+                .set(passwd.eq(req.passwd))
+                .execute(conn)
+        })
+        .await
+        .map_err(internal_error)?
+        .map_err(internal_error)?;
+
+    Ok(Json(UpdateSecretLinkPasswdResp { success: true }))
+    // return Err((StatusCode::BAD_REQUEST, "invalid".to_string()));
 }
 
 /// Utility function for mapping any error into a `500 Internal Server Error`

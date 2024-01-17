@@ -9,8 +9,8 @@ use tracing::Level;
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_login_signmsg, get_tickets_by_secret_token, list_tickets, login_by_address,
-    query_user_by_address,
+    bind_email, get_login_signmsg, get_tickets_by_secret_link, list_tickets, login_by_address,
+    query_user_by_address, update_secret_link_passwd,
 };
 
 pub mod api;
@@ -50,7 +50,11 @@ async fn main() {
         .route("/address/login", post(login_by_address))
         .route("/address/tickets", get(list_tickets))
         // .route("/address/tickets/:uid", get(list_tickets_by_userid))
-        .route("/address/slink", post(get_tickets_by_secret_token))
+        .route("/address/slink", post(get_tickets_by_secret_link))
+        .route(
+            "/address/updateslinkpasswd",
+            post(update_secret_link_passwd),
+        )
         .with_state(pool);
 
     // run it with hyper
