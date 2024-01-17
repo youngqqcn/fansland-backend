@@ -1,9 +1,12 @@
+use core::fmt;
+
 use axum::{
     body::Body,
     extract::{Path, State},
     http::StatusCode,
     response::{Json, Response},
 };
+use deadpool_diesel::Error;
 use fansland_common::RespVO;
 use fansland_sign::verify_signature;
 
@@ -188,8 +191,8 @@ pub async fn get_tickets_by_address(
 pub async fn get_tickets_by_secret_link(
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(secret_token_req): Json<GetTicketsBySecretToken>,
-) -> Result<Json<Vec<Ticket>>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let conn = pool.get().await.map_err(new_internal_error)?;
     let req = secret_token_req.clone();
 
     // 查询用户
@@ -206,8 +209,8 @@ pub async fn get_tickets_by_secret_link(
             // tickets.filter(user_id.eq(uid)).load(conn)
         })
         .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
+        .map_err(new_internal_error)?
+        .map_err(new_internal_error)?;
 
     if let Some(usr) = res.get(0) {
         // 获取该用户所有的票
@@ -218,13 +221,13 @@ pub async fn get_tickets_by_secret_link(
                 tickets.filter(user_address.eq(usr_address)).load(conn)
             })
             .await
-            .map_err(internal_error)?
-            .map_err(internal_error)?;
+            .map_err(new_internal_error)?
+            .map_err(new_internal_error)?;
 
-        return Ok(Json(ret));
+        return Ok(RespVO::from(&ret).resp_json());
     }
 
-    return Err((StatusCode::BAD_REQUEST, "invalid".to_string()));
+    return new_api_error("invalid param".to_owned());
 }
 
 // 更新密码
@@ -275,4 +278,17 @@ where
             data: None,
         }),
     )
+}
+
+fn new_api_error(err: String) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let msg = format!("INTERNAL_SERVER_ERROR: {}", err.to_string());
+    warn!("{}", msg.clone());
+    Err((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(RespVO::<String> {
+            code: Some(-1),
+            msg: Some(msg),
+            data: None,
+        }),
+    ))
 }
