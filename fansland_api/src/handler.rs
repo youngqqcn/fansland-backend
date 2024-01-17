@@ -119,7 +119,7 @@ pub async fn sign_in_with_ethereum(
             if usr.nonce.eq(&lrq.msg) {
                 // 验证签名 + 消息
                 if verify_signature(lrq.msg, lrq.sig, lrq.address) {
-                    // TODO: 生成token
+                    // TODO: 生成token, 并插入数据库(todo: redis)
 
                     return Ok(RespVO::from(&LoginByAddressResp {
                         success: true,
