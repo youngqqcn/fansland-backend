@@ -86,10 +86,10 @@ pub async fn get_login_signmsg(
 pub async fn login_by_address(
     State(pool): State<deadpool_diesel::postgres::Pool>,
     Json(login_req): Json<LoginByAddressReq>,
-) -> Result<Json<LoginByAddressResp>, (StatusCode, String)> {
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let lrq = login_req.clone();
 
-    let conn = pool.get().await.map_err(internal_error)?;
+    let conn = pool.get().await.map_err(new_internal_error)?;
     // let uid = query_user_id;
     let usrs: Vec<User> = conn
         .interact(move |conn| {
@@ -97,8 +97,8 @@ pub async fn login_by_address(
             users.filter(user_address.eq(login_req.address)).load(conn)
         })
         .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
+        .map_err(new_internal_error)?
+        .map_err(new_internal_error)?;
 
     tracing::debug!("len of usrs : {}", usrs.len());
 
@@ -115,28 +115,29 @@ pub async fn login_by_address(
                 if verify_signature(lrq.msg, lrq.sig, lrq.address) {
                     // TODO: 生成token
 
-                    return Ok(Json(LoginByAddressResp {
+                    return Ok(RespVO::from(&LoginByAddressResp {
                         success: true,
                         token: "ok-token-success".to_string(),
-                    }));
+                    })
+                    .resp_json());
                 } else {
-                    return Err((StatusCode::BAD_REQUEST, "verify sig failed".to_string()));
+                    tracing::error!("verify sig failed");
                 }
             } else {
-                return Err((StatusCode::BAD_REQUEST, "nonce not match".to_string()));
+                tracing::error!("nonce not match");
             }
         } else {
-            return Err((StatusCode::BAD_REQUEST, "address not match".to_string()));
+            tracing::error!("address not match");
         }
     } else {
-        Err((StatusCode::BAD_REQUEST, " user is empty".to_string()))
+        tracing::error!("user is empty");
     }
+    new_api_error("invalid signature".to_owned())
 }
 
 pub async fn query_user_by_address(
     Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    // ) -> Result<Json<RespVO<Vec<User>>>, (StatusCode, Json<RespVO<String>>)> {
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let conn = pool.get().await.map_err(new_internal_error)?;
     let res: Vec<User> = conn
@@ -150,18 +151,6 @@ pub async fn query_user_by_address(
 
     Ok(RespVO::from(&res).resp_json())
 }
-
-// pub async fn list_users(
-//     State(pool): State<deadpool_diesel::postgres::Pool>,
-// ) -> Result<Json<Vec<User>>, (StatusCode, String)> {
-//     let conn = pool.get().await.map_err(internal_error)?;
-//     let res = conn
-//         .interact(|conn| users::table.select(User::as_select()).load(conn))
-//         .await
-//         .map_err(internal_error)?
-//         .map_err(internal_error)?;
-//     Ok(Json(res))
-// }
 
 // list tickets
 pub async fn get_tickets_by_address(
