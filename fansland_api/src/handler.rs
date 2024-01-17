@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::State,
     http::StatusCode,
     response::{Json, Response},
 };
@@ -13,7 +13,7 @@ use tracing::warn;
 use crate::{
     api::{
         BindEmailReq, BindEmailResp, GetLoginNonceResp, GetTicketsBySecretToken, LoginByAddressReq,
-        LoginByAddressResp, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
+        LoginByAddressResp, QueryAddressReq, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
     model::*,
@@ -50,18 +50,18 @@ pub async fn bind_email(
 // get login nonce
 // pub async fn get_login_nonce(
 pub async fn get_login_signmsg(
-    Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
+    JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let conn = pool.get().await.map_err(new_internal_error)?;
     let msg_template = format!("https://fansland.io wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland! This request will NOT trigger a blockchain transaction or cost any gas fees.\n\nURI: https://fansland.io\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
-        addr,
+        req.address,
         56, // chainId
         "test-nonce", //TODO: nonce
         "test-timestamp" //TODO: timestamp,
     );
     let rsp = GetLoginNonceResp {
-        address: addr.clone(),
+        address: req.address.clone(),
         signmsg: msg_template.clone(),
     };
 
@@ -73,7 +73,7 @@ pub async fn get_login_signmsg(
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
             diesel::update(users)
-                .filter(user_address.eq(addr))
+                .filter(user_address.eq(req.address))
                 .set((
                     nonce.eq(msg_template.clone()),
                     token.eq("xxxxxxxxxxxxxxxxxxxx"), // TODO: token
@@ -143,14 +143,14 @@ pub async fn sign_in_with_ethereum(
 }
 
 pub async fn query_user_by_address(
-    Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
+    JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let conn = pool.get().await.map_err(new_internal_error)?;
     let res: Vec<User> = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
-            users.filter(user_address.eq(addr)).load(conn)
+            users.filter(user_address.eq(req.address)).load(conn)
         })
         .await
         .map_err(new_internal_error)?
@@ -160,9 +160,10 @@ pub async fn query_user_by_address(
 }
 
 // list tickets
-pub async fn get_tickets_by_address(
-    Path(addr): Path<String>,
+pub async fn query_tickets_by_address(
+    // Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
+    JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let conn = pool.get().await.map_err(new_internal_error)?;
     //TODO: 在中间件中校验token的合法性
@@ -171,7 +172,7 @@ pub async fn get_tickets_by_address(
     let ret: Vec<Ticket> = conn
         .interact(move |conn| {
             use crate::schema::tickets::dsl::*;
-            tickets.filter(user_address.eq(addr)).load(conn)
+            tickets.filter(user_address.eq(req.address)).load(conn)
         })
         .await
         .map_err(new_internal_error)?

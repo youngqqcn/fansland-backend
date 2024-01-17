@@ -3,26 +3,25 @@ use axum::{
     http::{StatusCode, Uri},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::post,
     Json, Router,
 };
 use fansland_common::RespVO;
 use std::net::SocketAddr;
 use tracing::{warn, Level};
-// use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_login_signmsg, get_tickets_by_address, get_tickets_by_secret_link,
+    bind_email, get_login_signmsg, get_tickets_by_secret_link, query_tickets_by_address,
     query_user_by_address, sign_in_with_ethereum, update_secret_link_passwd,
 };
 
 pub mod api;
+mod extract;
 pub mod handler;
 pub mod model;
 pub mod schema;
-mod extract;
 
 #[tokio::main]
 async fn main() {
@@ -50,22 +49,16 @@ async fn main() {
 
     // build our application with some routes
     let need_auth_routers = Router::new()
-        // .route("/siwe/msg/:address", get(get_login_signmsg))
-        // .route("/siwe/signin", post(sign_in_with_ethereum))
-        .route("/address/:address", get(query_user_by_address))
-        .route("/address/bindemail", post(bind_email))
-        .route("/address/tickets/:address", get(get_tickets_by_address))
-        // .route("/address/slink", post(get_tickets_by_secret_link))
-        .route(
-            "/address/updateslinkpasswd",
-            post(update_secret_link_passwd),
-        )
+        .route("/queryAddress", post(query_user_by_address))
+        .route("/bindEmail", post(bind_email))
+        .route("/queryTicketsByAddress", post(query_tickets_by_address))
+        .route("/updateSlink", post(update_secret_link_passwd))
         .layer(middleware::from_fn(print_request_body));
 
     let noneed_auth_routers = Router::new()
-        .route("/address/slink", post(get_tickets_by_secret_link))
-        .route("/siwe/msg/:address", get(get_login_signmsg))
-        .route("/siwe/signin", post(sign_in_with_ethereum));
+        .route("/slink", post(get_tickets_by_secret_link))
+        .route("/getSiweMsg", post(get_login_signmsg))
+        .route("/signInWithEthereum", post(sign_in_with_ethereum));
 
     let app_routers = need_auth_routers
         .merge(noneed_auth_routers)
@@ -117,7 +110,6 @@ async fn print_request_body(request: Request, next: Next) -> Result<impl IntoRes
     // tracing::debug!("{}", request.headers());
     Ok(next.run(request).await)
 }
-
 
 // pub struct AppState {
 //     pub pool: Pool<Manager<PgConnection>>,

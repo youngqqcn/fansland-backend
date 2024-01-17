@@ -5,6 +5,11 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryAddressReq {
+    pub address: String,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct BindEmailReq {
     pub address: String,
     pub email: String,
