@@ -1,5 +1,8 @@
 use axum::{
+    extract::Request,
     http::{StatusCode, Uri},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -56,6 +59,7 @@ async fn main() {
             "/address/updateslinkpasswd",
             post(update_secret_link_passwd),
         )
+        .layer(middleware::from_fn(print_request_body))
         .fallback(fallback)
         .with_state(pool);
 
@@ -89,3 +93,17 @@ async fn fallback(uri: Uri) -> Result<String, (StatusCode, Json<RespVO<String>>)
 //     }
 //     .resp_json()
 // }
+
+//====================
+
+// middleware that shows how to consume the request body upfront
+async fn print_request_body(request: Request, next: Next) -> Result<impl IntoResponse, Response> {
+    // let request = buffer_request_body(request).await?;
+
+    let hs = request.headers();
+    for (name, value) in hs.iter() {
+        tracing::debug!("====== {}: {:?}", name, value);
+    }
+    // tracing::debug!("{}", request.headers());
+    Ok(next.run(request).await)
+}
