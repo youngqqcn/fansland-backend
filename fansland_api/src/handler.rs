@@ -10,24 +10,27 @@ use diesel::prelude::*;
 // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
-    api::{BindEmailReq, BindEmailResp, GetLoginNonceResp, LoginByAddressReq, LoginByAddressResp},
+    api::{
+        BindEmailReq, BindEmailResp, GetLoginNonceResp, GetTicketsBySecretToken, LoginByAddressReq,
+        LoginByAddressResp,
+    },
     model::*,
     schema::{
         tickets::{self, user_id},
-        users::{self},
+        users::{self, user_address},
     },
 };
 
 pub async fn bind_email(
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    Json(new_user): Json<BindEmailReq>,
+    Json(req): Json<BindEmailReq>,
 ) -> Result<Json<BindEmailResp>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
     let _ = conn
         .interact(move |conn| {
             let xuser = CreateUser {
-                address: new_user.address,
-                email: new_user.email,
+                user_address: req.address,
+                email: req.email,
                 nonce: "noce".to_string(),
                 token: "token".to_string(),
             };
@@ -65,7 +68,7 @@ pub async fn get_login_signmsg(
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
             diesel::update(users)
-                .filter(address.eq(addr))
+                .filter(user_address.eq(addr))
                 .set((
                     nonce.eq(msg_template.clone()),
                     token.eq("xxxxxxxxxxxxxxxxxxxx"),
@@ -91,7 +94,7 @@ pub async fn login_by_address(
     let usrs: Vec<User> = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
-            users.filter(address.eq(login_req.address)).load(conn)
+            users.filter(user_address.eq(login_req.address)).load(conn)
         })
         .await
         .map_err(internal_error)?
@@ -100,8 +103,12 @@ pub async fn login_by_address(
     tracing::debug!("len of usrs : {}", usrs.len());
 
     if let Some(usr) = usrs.get(0) {
-        tracing::debug!("usr.address: {}, lrq.address:{}", usr.address, lrq.address);
-        if usr.address.eq(&lrq.address) {
+        tracing::debug!(
+            "usr.address: {}, lrq.address:{}",
+            usr.user_address,
+            lrq.address
+        );
+        if usr.user_address.eq(&lrq.address) {
             tracing::debug!("usr.nonce: {}, lrq.msg:{}", usr.nonce, lrq.msg);
             if usr.nonce.eq(&lrq.msg) {
                 // 验证签名 + 消息
@@ -136,7 +143,7 @@ pub async fn query_user_by_address(
     let res = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
-            users.filter(address.eq(addr)).load(conn)
+            users.filter(user_address.eq(addr)).load(conn)
         })
         .await
         .map_err(internal_error)?
@@ -170,22 +177,47 @@ pub async fn list_tickets(
 }
 
 // list tickets by userid
-pub async fn list_tickets_by_userid(
-    Path(uid): Path<i64>,
+pub async fn get_tickets_by_secret_token(
+    // Path(uid): Path<i64>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
-    // Json(new_user): Json<NewUser>,
+    Json(secret_token_req): Json<GetTicketsBySecretToken>,
 ) -> Result<Json<Vec<Ticket>>, (StatusCode, String)> {
     let conn = pool.get().await.map_err(internal_error)?;
-    // let uid = query_user_id;
-    let res = conn
-        .interact(move |conn| {
-            use crate::schema::tickets::dsl::*;
-            tickets.filter(user_id.eq(uid)).load(conn)
+    let req: GetTicketsBySecretToken = secret_token_req.clone();
+
+    // 查询用户
+    let res: Vec<User> = conn
+        .interact(|conn| {
+            use crate::schema::users::dsl::*;
+            users
+                .filter(user_address.eq(req.address))
+                .filter(token.eq(req.token))
+                .filter(passwd.eq(req.passwd))
+                .load(conn)
+
+            // use crate::schema::tickets::dsl::*;
+            // tickets.filter(user_id.eq(uid)).load(conn)
         })
         .await
         .map_err(internal_error)?
         .map_err(internal_error)?;
-    Ok(Json(res))
+
+    if let Some(usr) = res.get(0) {
+        // 获取该用户所有的票
+        let usr_address = usr.user_address.clone();
+        let ret: Vec<Ticket> = conn
+            .interact(move |conn| {
+                use crate::schema::tickets::dsl::*;
+                tickets.filter(user_address.eq(usr_address)).load(conn)
+            })
+            .await
+            .map_err(internal_error)?
+            .map_err(internal_error)?;
+
+        return Ok(Json(ret));
+    }
+
+    return Err((StatusCode::BAD_REQUEST, "invalid".to_string()));
 }
 
 /// Utility function for mapping any error into a `500 Internal Server Error`

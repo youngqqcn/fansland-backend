@@ -9,7 +9,7 @@ use tracing::Level;
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_login_signmsg, list_tickets, list_tickets_by_userid, login_by_address,
+    bind_email, get_login_signmsg, get_tickets_by_secret_token, list_tickets, login_by_address,
     query_user_by_address,
 };
 
@@ -48,8 +48,9 @@ async fn main() {
         .route("/address/bind", post(bind_email))
         .route("/address/signmsg/:address", get(get_login_signmsg))
         .route("/address/login", post(login_by_address))
-        .route("/tickets", get(list_tickets))
-        .route("/tickets/:uid", get(list_tickets_by_userid))
+        .route("/address/tickets", get(list_tickets))
+        // .route("/address/tickets/:uid", get(list_tickets_by_userid))
+        .route("/address/slink", post(get_tickets_by_secret_token))
         .with_state(pool);
 
     // run it with hyper

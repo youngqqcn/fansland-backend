@@ -5,20 +5,19 @@ use diesel::prelude::*;
 #[derive(serde::Serialize, Selectable, Queryable)]
 pub struct User {
     pub id: i32,
-    pub address: String,
+    pub user_address: String,
     pub email: String,
     pub nonce: String,
     pub token: String,
+    pub passwd: Option<String>,
     pub update_at: Option<NaiveDateTime>,
 }
-
-
 
 #[derive(serde::Deserialize, Insertable, Clone)]
 #[diesel(table_name = users)]
 pub struct CreateUser {
     // pub id: i32,
-    pub address: String,
+    pub user_address: String,
     pub email: String,
     pub nonce: String,
     pub token: String,
@@ -26,16 +25,17 @@ pub struct CreateUser {
 }
 
 // ticket
-#[derive(serde::Serialize, Selectable, Queryable, Insertable, Debug)]
+#[derive(serde::Serialize, Selectable, Queryable, Insertable, Debug, Clone)]
 pub struct Ticket {
-    id: i32,
-    user_id: i64,
-    chain_name: String,
-    contract_address: String,
-    nft_token_id: i64,
-    txhash: String,
-    qrcode: Option<String>,
-    redeem_status: i32,
-    transfer_status: i32,
-    update_at: Option<NaiveDateTime>,
+    pub id: i32,
+    pub user_id: i64,
+    pub user_address: String,
+    pub chain_name: String,
+    pub contract_address: String,
+    pub nft_token_id: i64,
+    pub txhash: String,
+    pub qrcode: Option<String>,
+    pub redeem_status: i32,
+    pub transfer_status: i32,
+    pub update_at: Option<NaiveDateTime>,
 }

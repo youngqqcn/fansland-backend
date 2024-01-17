@@ -4,6 +4,7 @@ diesel::table! {
     tickets (id) {
         id -> Int4,
         user_id -> Int8,
+        user_address -> Varchar,
         chain_name -> Varchar,
         contract_address -> Varchar,
         nft_token_id -> Int8,
@@ -18,10 +19,11 @@ diesel::table! {
 diesel::table! {
     users (id) {
         id -> Int4,
-        address -> Varchar,
+        user_address -> Varchar,
         email -> Varchar,
         nonce -> Varchar,
         token -> Varchar,
+        passwd -> Nullable<Varchar>,
         update_at -> Nullable<Timestamp>,
     }
 }
