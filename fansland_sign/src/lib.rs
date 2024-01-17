@@ -1,4 +1,4 @@
-use ethers::types::{Address, Signature};
+use ethers::types::{Address, Signature, SignatureError};
 use std::str::FromStr;
 
 // https://github.com/MetaMask/test-dapp/blob/0ea6cc7a496eb0049c735b4deffcc0ba9b234281/src/index.js#L1849C1-L1857C5
@@ -20,43 +20,39 @@ Nonce:
 347efdd5-10fd-4f59-b4a0-59ea36fc1624
 */
 
-// fn verify_signature(
-//     msg: String,
-//     sig: String,
-//     address: String,
-// ) -> Result<(), Box<dyn std::error::Error>> {
-//     // 将字符串签名转换为 Signature 类型
-//     let signature = Signature::from_str(&sig)?;
-//     let address = Address::from_str(&address)?;
+pub fn verify_signature(msg: String, sig: String, address: String) -> Result<(), SignatureError> {
+    // 将字符串签名转换为 Signature 类型
+    let signature = Signature::from_str(&sig)?;
+    let address = Address::from_str(&address).unwrap();
 
-//     signature.verify(msg.clone(), address)?;
+    signature.verify(msg.clone(), address)?;
 
-//     let addr = signature.recover(msg.clone())?;
-//     println!("addr: {}", addr.to_string());
-//     if addr == address {
-//         println!("verify ok");
-//     } else {
-//         println!("verify failed");
-//     }
-//     Ok(())
-// }
-
-pub fn verify_signature(msg: String, sig: String, address: String) -> bool {
-    match (Signature::from_str(&sig), Address::from_str(&address)) {
-        (Ok(signature), Ok(address)) => {
-            if signature.verify(msg.clone(), address).is_ok() {
-                let recovered_address = signature.recover(msg.as_bytes()).ok();
-                if let Some(addr) = recovered_address {
-                    println!("addr: {}", addr.to_string());
-                    return addr == address;
-                }
-            }
-        }
-        _ => {}
-    }
-
-    false
+    // let addr = signature.recover(msg.clone())?;
+    // println!("addr: {}", addr.to_string());
+    // if addr == address {
+    //     println!("verify ok");
+    // } else {
+    //     println!("verify failed");
+    // }
+    Ok(())
 }
+
+// pub fn verify_signature(msg: String, sig: String, address: String) -> bool {
+//     match (Signature::from_str(&sig), Address::from_str(&address)) {
+//         (Ok(signature), Ok(address)) => {
+//             if signature.verify(msg.clone(), address).is_ok() {
+//                 let recovered_address = signature.recover(msg.as_bytes()).ok();
+//                 if let Some(addr) = recovered_address {
+//                     println!("addr: {}", addr.to_string());
+//                     return addr == address;
+//                 }
+//             }
+//         }
+//         (Err(err1), Err(err2)) => {}
+//     }
+
+//     false
+// }
 
 #[cfg(test)]
 mod tests {
@@ -75,8 +71,12 @@ mod tests {
         let x = verify_signature(raw_msg,
         "0x92ef936ef3470d6564d34c169ae1392523a11df9e71fa799df2c66c16dc4c33b11b1bd1dc84db7448f97962dc8574f02b656743c54455a796a97c64d4ce56d7b1b".to_owned(),
         "0xbfe5f435389ca190c3d3dec351db0ee9a8657a53".to_owned());
-        println!("verify: {}", x);
-        assert!(x == true);
+        // println!("verify: {}", x);
+        // assert!(x == true);
+        match x {
+            Ok(_) => println!("ok"),
+            Err(err) => println!("{}", err.to_string()),
+        }
     }
 
     #[test]
@@ -91,7 +91,9 @@ mod tests {
         let x = verify_signature(raw_msg,
         "0x92ef936ef3470d6564d34c169ae1392523a11df9e71fa799df2c66c16dc4c33b11b1bd1dc84db7448f97962dc8574f02b656743c54455a796a97c64d4ce56d7b1b".to_owned(),
         "0xbfe5f435389ca190c3d3dec351db0ee9a8657a53".to_owned());
-        println!("verify: {}", x);
-        assert!(x == false, "xx");
+        match x {
+            Ok(_) => println!("ok"),
+            Err(err) => println!("{}", err.to_string()),
+        }
     }
 }

@@ -20,6 +20,9 @@ use crate::{
     model::*,
     schema::users::{self},
 };
+use ethers::types::{Address, Signature, SignatureError};
+use std::str::FromStr;
+
 use deadpool_diesel::{Manager, Pool};
 use diesel::PgConnection;
 // use fansland_common::RespVO;
@@ -84,15 +87,14 @@ pub async fn get_login_signmsg(
         signmsg: msg_template.clone(),
     };
 
-    // TODO: 查询数据库, 判断地址是否存在，如果存在则更新，否则插入数据
-    // TODO: 使用redis
+    // 使用redis
     let mut rds_conn = app_state
         .rds_pool
         .aquire()
         .await
         .map_err(new_internal_error)?;
 
-    // 设置
+    // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
     let _: () = redis::pipe()
         .set(req.address.clone(), msg_template.clone())
         .ignore()
@@ -101,22 +103,21 @@ pub async fn get_login_signmsg(
         .map_err(new_internal_error)?;
 
     // 更新数据库
-    let res = conn
-        .interact(move |conn| {
-            use crate::schema::users::dsl::*;
-            diesel::update(users)
-                .filter(user_address.eq(req.address))
-                .set((
-                    nonce.eq(msg_template.clone()),
-                    token.eq("xxxxxxxxxxxxxxxxxxxx"), // TODO: token
-                ))
-                .execute(conn)
-        })
-        .await
-        .map_err(new_internal_error)?
-        .map_err(new_internal_error)?;
-
-    tracing::debug!("res: {}", res);
+    // let res = conn
+    //     .interact(move |conn| {
+    //         use crate::schema::users::dsl::*;
+    //         diesel::update(users)
+    //             .filter(user_address.eq(req.address))
+    //             .set((
+    //                 nonce.eq(msg_template.clone()),
+    //                 token.eq("xxxxxxxxxxxxxxxxxxxx"),
+    //             ))
+    //             .execute(conn)
+    //     })
+    //     .await
+    //     .map_err(new_internal_error)?
+    //     .map_err(new_internal_error)?;
+    // tracing::debug!("res: {}", res);
 
     Ok(RespVO::from(&rsp).resp_json())
 }
@@ -128,53 +129,80 @@ pub async fn sign_in_with_ethereum(
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let lrq = login_req.clone();
 
-    let conn = app_state
-        .psql_pool
-        .get()
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
         .await
         .map_err(new_internal_error)?;
-    // let uid = query_user_id;
-    let usrs: Vec<User> = conn
-        .interact(move |conn| {
-            use crate::schema::users::dsl::*;
-            users.filter(user_address.eq(login_req.address)).load(conn)
-        })
+
+    // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
+    let msg: String = redis::cmd("GET")
+        .arg(lrq.address.clone())
+        .query_async(&mut rds_conn)
         .await
-        .map_err(new_internal_error)?
         .map_err(new_internal_error)?;
 
-    tracing::debug!("len of usrs : {}", usrs.len());
+    tracing::debug!("===========msg == {}", msg);
 
-    if let Some(usr) = usrs.get(0) {
-        tracing::debug!(
-            "usr.address: {}, lrq.address:{}",
-            usr.user_address,
-            lrq.address
-        );
-        if usr.user_address.eq(&lrq.address) {
-            tracing::debug!("usr.nonce: {}, lrq.msg:{}", usr.nonce, lrq.msg);
-            if usr.nonce.eq(&lrq.msg) {
-                // 验证签名 + 消息
-                if verify_signature(lrq.msg, lrq.sig, lrq.address) {
-                    // TODO: 生成token, 并插入数据库(todo: redis)
+    // 验证签名
+    // 验证签名 + 消息
+    let signature = Signature::from_str(&lrq.sig.clone()).map_err(new_internal_error)?;
+    let address = Address::from_str(&lrq.address.clone()).map_err(new_internal_error)?;
+    signature
+        .verify(msg.clone(), address)
+        .map_err(new_internal_error)?;
 
-                    return Ok(RespVO::from(&LoginByAddressResp {
-                        success: true,
-                        token: "ok-token-success".to_string(),
-                    })
-                    .resp_json());
-                } else {
-                    tracing::error!("verify sig failed");
-                }
-            } else {
-                tracing::error!("nonce not match");
-            }
-        } else {
-            tracing::error!("address not match");
-        }
-    } else {
-        tracing::error!("user is empty");
-    }
+    tracing::debug!("============验证签名成功================");
+    
+
+    // let conn = app_state
+    //     .psql_pool
+    //     .get()
+    //     .await
+    //     .map_err(new_internal_error)?;
+    // // let uid = query_user_id;
+    // let usrs: Vec<User> = conn
+    //     .interact(move |conn| {
+    //         use crate::schema::users::dsl::*;
+    //         users.filter(user_address.eq(login_req.address)).load(conn)
+    //     })
+    //     .await
+    //     .map_err(new_internal_error)?
+    //     .map_err(new_internal_error)?;
+
+    // tracing::debug!("len of usrs : {}", usrs.len());
+
+    // if let Some(usr) = usrs.get(0) {
+    //     tracing::debug!(
+    //         "usr.address: {}, lrq.address:{}",
+    //         usr.user_address,
+    //         lrq.address
+    //     );
+    //     if usr.user_address.eq(&lrq.address) {
+    //         tracing::debug!("usr.nonce: {}, lrq.msg:{}", usr.nonce, lrq.msg);
+    //         if usr.nonce.eq(&lrq.msg) {
+    //             // 验证签名 + 消息
+    //             // if verify_signature(lrq.msg, lrq.sig, lrq.address) {
+    //             //     // TODO: 生成token, 并插入数据库(todo: redis)
+
+    //             //     return Ok(RespVO::from(&LoginByAddressResp {
+    //             //         success: true,
+    //             //         token: "ok-token-success".to_string(),
+    //             //     })
+    //             //     .resp_json());
+    //             // } else {
+    //             //     tracing::error!("verify sig failed");
+    //             // }
+    //         } else {
+    //             tracing::error!("nonce not match");
+    //         }
+    //     } else {
+    //         tracing::error!("address not match");
+    //     }
+    // } else {
+    //     tracing::error!("user is empty");
+    // }
     new_api_error("invalid signature".to_owned())
 }
 
