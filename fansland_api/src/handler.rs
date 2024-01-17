@@ -133,24 +133,6 @@ pub async fn login_by_address(
     }
 }
 
-// pub async fn query_user_by_address(
-//     Path(addr): Path<String>,
-//     State(pool): State<deadpool_diesel::postgres::Pool>,
-//     // Json(new_user): Json<NewUser>,
-// ) -> Result<Json<Vec<User>>, (StatusCode, String)> {
-//     let conn = pool.get().await.map_err(internal_error)?;
-//     // let uid = query_user_id;
-//     let res = conn
-//         .interact(move |conn| {
-//             use crate::schema::users::dsl::*;
-//             users.filter(user_address.eq(addr)).load(conn)
-//         })
-//         .await
-//         .map_err(internal_error)?
-//         .map_err(internal_error)?;
-//     Ok(Json(res))
-// }
-
 pub async fn query_user_by_address(
     Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
@@ -169,24 +151,24 @@ pub async fn query_user_by_address(
     Ok(RespVO::from(&res).resp_json())
 }
 
-pub async fn list_users(
-    State(pool): State<deadpool_diesel::postgres::Pool>,
-) -> Result<Json<Vec<User>>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
-    let res = conn
-        .interact(|conn| users::table.select(User::as_select()).load(conn))
-        .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
-    Ok(Json(res))
-}
+// pub async fn list_users(
+//     State(pool): State<deadpool_diesel::postgres::Pool>,
+// ) -> Result<Json<Vec<User>>, (StatusCode, String)> {
+//     let conn = pool.get().await.map_err(internal_error)?;
+//     let res = conn
+//         .interact(|conn| users::table.select(User::as_select()).load(conn))
+//         .await
+//         .map_err(internal_error)?
+//         .map_err(internal_error)?;
+//     Ok(Json(res))
+// }
 
 // list tickets
 pub async fn get_tickets_by_address(
     Path(addr): Path<String>,
     State(pool): State<deadpool_diesel::postgres::Pool>,
-) -> Result<Json<Vec<Ticket>>, (StatusCode, String)> {
-    let conn = pool.get().await.map_err(internal_error)?;
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let conn = pool.get().await.map_err(new_internal_error)?;
     //TODO: 在中间件中校验token的合法性
 
     // 获取该用户所有的票
@@ -196,10 +178,10 @@ pub async fn get_tickets_by_address(
             tickets.filter(user_address.eq(addr)).load(conn)
         })
         .await
-        .map_err(internal_error)?
-        .map_err(internal_error)?;
+        .map_err(new_internal_error)?
+        .map_err(new_internal_error)?;
 
-    return Ok(Json(ret));
+    Ok(RespVO::from(&ret).resp_json())
 }
 
 // list tickets by secret link
