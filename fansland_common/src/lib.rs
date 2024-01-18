@@ -1,5 +1,10 @@
 pub mod error;
 pub mod utils;
+pub mod jwt;
+
+#[macro_use]
+extern crate getset;
+
 
 use axum::{body::Body, response::Response};
 use error::Error;

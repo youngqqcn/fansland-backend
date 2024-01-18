@@ -1,17 +1,13 @@
-use std::default;
-
-use cassie_common::error::Error;
+use super::error::Error;
 use jsonwebtoken::errors::ErrorKind;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Getters, Setters, Default)]
 #[getset(get = "pub", set = "pub")]
 pub struct JWTToken {
-    id: i64,
     user_address: String,
-    exp: usize,
+    exp: u64,
 }
 
 impl JWTToken {
@@ -34,9 +30,10 @@ impl JWTToken {
 
     // 验证并返回JWTToken
     pub fn verify(secret: &str, token: &str) -> Result<JWTToken, Error> {
-        let validation = Validation {
-            ..Validation::default()
-        };
+        // let validation = Validation {
+        //     ..Validation::default()
+        // };
+        let validation = Validation::default();
         return match decode::<JWTToken>(
             &token,
             &DecodingKey::from_secret(secret.as_ref()),

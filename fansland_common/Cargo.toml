@@ -19,3 +19,5 @@ diesel_migrations = "2"
 
 # rbatis = { version = "3.0", default-features = false, features = ["mysql", "runtime-async-std-rustls"] }
 # rbson = "2.0.3"
+jsonwebtoken = "9.2.0"
+getset = "0.1.2"

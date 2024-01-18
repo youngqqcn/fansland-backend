@@ -30,6 +30,7 @@ pub struct LoginByAddressReq {
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct LoginByAddressResp {
     pub success: bool,
+    pub address: String,
     pub token: String, // token
 }
 

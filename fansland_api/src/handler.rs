@@ -4,8 +4,8 @@ use axum::{
     http::StatusCode,
     response::{Json, Response},
 };
-use fansland_common::RespVO;
-use fansland_sign::verify_signature;
+use fansland_common::{jwt::JWTToken, RespVO};
+// use fansland_sign::verify_signature;
 
 use diesel::prelude::*;
 use redis_pool::RedisPool;
@@ -20,8 +20,11 @@ use crate::{
     model::*,
     schema::users::{self},
 };
-use ethers::types::{Address, Signature, SignatureError};
-use std::str::FromStr;
+use ethers::types::{Address, Signature};
+use std::{
+    str::FromStr,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use deadpool_diesel::{Manager, Pool};
 use diesel::PgConnection;
@@ -71,17 +74,23 @@ pub async fn get_login_signmsg(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let conn = app_state
-        .psql_pool
-        .get()
-        .await
-        .map_err(new_internal_error)?;
-    let msg_template = format!("https://fansland.io wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland! This request will NOT trigger a blockchain transaction or cost any gas fees.\n\nURI: https://fansland.io\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
-        req.address,
-        56, // chainId
-        "test-nonce", //TODO: nonce
-        "test-timestamp" //TODO: timestamp,
-    );
+    // let conn = app_state
+    //     .psql_pool
+    //     .get()
+    //     .await
+    //     .map_err(new_internal_error)?;
+    // let msg_template = format!("https://fansland.io wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland! This request will NOT trigger a blockchain transaction or cost any gas fees.\n\nURI: https://fansland.io\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
+    //     req.address,
+    //     56, // chainId
+    //     "test-nonce", //TODO: nonce
+    //     "test-timestamp" //TODO: timestamp,
+    // );
+
+    let nonce = "uuid-todo";
+    let timestamp = "2021-09-30T16:25:24.000Z";
+
+    let msg_template = String::from( "localhost:9011 wants you to sign in with your Ethereum account:\n\n0xbfe5f435389ca190c3d3dec351db0ee9a8657a53\n\nI accepted the MetaMask Terms of Service: https://community.metamask.io/tos\n\nURI: https://localhost:9011\nVersion: 1\nChain ID: 1\nNonce: 32891757\nIssued At: 2021-09-30T16:25:24.000Z");
+
     let rsp = GetLoginNonceResp {
         address: req.address.clone(),
         signmsg: msg_template.clone(),
@@ -95,29 +104,14 @@ pub async fn get_login_signmsg(
         .map_err(new_internal_error)?;
 
     // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
+    // 消息设置1个小时过期时间
     let _: () = redis::pipe()
         .set(req.address.clone(), msg_template.clone())
+        .expire(req.address.clone(), 10 * 60)
         .ignore()
         .query_async(&mut rds_conn)
         .await
         .map_err(new_internal_error)?;
-
-    // 更新数据库
-    // let res = conn
-    //     .interact(move |conn| {
-    //         use crate::schema::users::dsl::*;
-    //         diesel::update(users)
-    //             .filter(user_address.eq(req.address))
-    //             .set((
-    //                 nonce.eq(msg_template.clone()),
-    //                 token.eq("xxxxxxxxxxxxxxxxxxxx"),
-    //             ))
-    //             .execute(conn)
-    //     })
-    //     .await
-    //     .map_err(new_internal_error)?
-    //     .map_err(new_internal_error)?;
-    // tracing::debug!("res: {}", res);
 
     Ok(RespVO::from(&rsp).resp_json())
 }
@@ -136,74 +130,71 @@ pub async fn sign_in_with_ethereum(
         .await
         .map_err(new_internal_error)?;
 
-    // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
-    let msg: String = redis::cmd("GET")
-        .arg(lrq.address.clone())
-        .query_async(&mut rds_conn)
-        .await
-        .map_err(new_internal_error)?;
+    tracing::debug!("===========从redis获取msg== ",);
 
+    // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
+    let msg = match redis::cmd("GET")
+        .arg(lrq.address.clone())
+        .query_async::<_, Option<String>>(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?
+    {
+        Some(m) => m,
+        None => return new_api_error("not found msg, please get new sign msg again".to_string()),
+    };
+
+    // 比对msg是否相同
     tracing::debug!("===========msg == {}", msg);
+    if !msg.eq(&login_req.msg) {
+        tracing::warn!("msg is not match");
+        return new_api_error("invalid sig".to_string());
+    }
+    tracing::debug!("===========msg比对成功 ");
 
     // 验证签名
-    // 验证签名 + 消息
     let signature = Signature::from_str(&lrq.sig.clone()).map_err(new_internal_error)?;
     let address = Address::from_str(&lrq.address.clone()).map_err(new_internal_error)?;
     signature
         .verify(msg.clone(), address)
         .map_err(new_internal_error)?;
 
-    tracing::debug!("============验证签名成功================");
-    
+    tracing::debug!("============验证签名成功");
 
-    // let conn = app_state
-    //     .psql_pool
-    //     .get()
-    //     .await
-    //     .map_err(new_internal_error)?;
-    // // let uid = query_user_id;
-    // let usrs: Vec<User> = conn
-    //     .interact(move |conn| {
-    //         use crate::schema::users::dsl::*;
-    //         users.filter(user_address.eq(login_req.address)).load(conn)
-    //     })
-    //     .await
-    //     .map_err(new_internal_error)?
-    //     .map_err(new_internal_error)?;
+    // TODO: 生成token
+    // let token = String::from("token-todo-expire");
+    let mut jwt_token = JWTToken::default();
+    jwt_token.set_user_address(lrq.address.clone());
+    jwt_token.set_exp(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(new_internal_error)?
+            .as_secs()
+            + 80000,
+    );
+    let token = jwt_token
+        .create_token("GXFC@Fansland.io@2024")
+        .map_err(new_internal_error)?;
 
-    // tracing::debug!("len of usrs : {}", usrs.len());
+    // 删除之前的msg,然后将token插入redis, 并设置过期时间为1天
+    let _: () = redis::pipe()
+        .del(lrq.address.clone())
+        .set(&token, lrq.address.clone())
+        .expire(&token, 24 * 60 * 60)
+        .ignore()
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?;
+    tracing::debug!("插入redis成功");
 
-    // if let Some(usr) = usrs.get(0) {
-    //     tracing::debug!(
-    //         "usr.address: {}, lrq.address:{}",
-    //         usr.user_address,
-    //         lrq.address
-    //     );
-    //     if usr.user_address.eq(&lrq.address) {
-    //         tracing::debug!("usr.nonce: {}, lrq.msg:{}", usr.nonce, lrq.msg);
-    //         if usr.nonce.eq(&lrq.msg) {
-    //             // 验证签名 + 消息
-    //             // if verify_signature(lrq.msg, lrq.sig, lrq.address) {
-    //             //     // TODO: 生成token, 并插入数据库(todo: redis)
+    // TODO: 插入数据库？
 
-    //             //     return Ok(RespVO::from(&LoginByAddressResp {
-    //             //         success: true,
-    //             //         token: "ok-token-success".to_string(),
-    //             //     })
-    //             //     .resp_json());
-    //             // } else {
-    //             //     tracing::error!("verify sig failed");
-    //             // }
-    //         } else {
-    //             tracing::error!("nonce not match");
-    //         }
-    //     } else {
-    //         tracing::error!("address not match");
-    //     }
-    // } else {
-    //     tracing::error!("user is empty");
-    // }
-    new_api_error("invalid signature".to_owned())
+    // 返回鉴权token
+    Ok(RespVO::from(&LoginByAddressResp {
+        success: true,
+        address: lrq.address.clone(),
+        token: token,
+    })
+    .resp_json())
 }
 
 pub async fn query_user_by_address(
