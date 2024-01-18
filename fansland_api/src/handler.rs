@@ -4,6 +4,7 @@ use axum::{
     http::StatusCode,
     response::{Json, Response},
 };
+use chrono::Utc;
 use fansland_common::{jwt::JWTToken, RespVO};
 // use fansland_sign::verify_signature;
 
@@ -13,14 +14,16 @@ use tracing::warn;
 
 use crate::{
     api::{
-        BindEmailReq, BindEmailResp, GetLoginNonceResp, GetTicketsBySecretToken, LoginByAddressReq,
-        LoginByAddressResp, QueryAddressReq, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
+        BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp, GetTicketsBySecretToken,
+        LoginByAddressReq, LoginByAddressResp, QueryAddressReq, UpdateSecretLinkPasswdReq,
+        UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
     model::*,
     schema::users::{self},
 };
 use ethers::types::{Address, Signature};
+use rand::Rng;
 use std::{
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
@@ -72,24 +75,19 @@ pub async fn bind_email(
 // pub async fn get_login_nonce(
 pub async fn get_login_signmsg(
     State(app_state): State<AppState>,
-    JsonReq(req): JsonReq<QueryAddressReq>,
+    JsonReq(req): JsonReq<GetLoginNonceReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let conn = app_state
-    //     .psql_pool
-    //     .get()
-    //     .await
-    //     .map_err(new_internal_error)?;
-    // let msg_template = format!("https://fansland.io wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland! This request will NOT trigger a blockchain transaction or cost any gas fees.\n\nURI: https://fansland.io\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
-    //     req.address,
-    //     56, // chainId
-    //     "test-nonce", //TODO: nonce
-    //     "test-timestamp" //TODO: timestamp,
-    // );
-
-    let nonce = "uuid-todo";
-    let timestamp = "2021-09-30T16:25:24.000Z";
-
-    let msg_template = String::from( "localhost:9011 wants you to sign in with your Ethereum account:\n\n0xbfe5f435389ca190c3d3dec351db0ee9a8657a53\n\nI accepted the MetaMask Terms of Service: https://community.metamask.io/tos\n\nURI: https://localhost:9011\nVersion: 1\nChain ID: 1\nNonce: 32891757\nIssued At: 2021-09-30T16:25:24.000Z");
+    let msg_domain = "localhost:8000";
+    let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
+    let msg_timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+    let msg_template = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland!\n\nURI: {}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
+        msg_domain,
+        req.address.clone(),
+        msg_domain,
+        req.chainid,
+        msg_nonce,
+        msg_timestamp
+    );
 
     let rsp = GetLoginNonceResp {
         address: req.address.clone(),

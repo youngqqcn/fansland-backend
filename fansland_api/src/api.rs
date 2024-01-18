@@ -34,6 +34,12 @@ pub struct LoginByAddressResp {
     pub token: String, // token
 }
 
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct GetLoginNonceReq {
+    pub address: String,
+    pub chainid: u64,
+}
+
 // get wallet login nonce
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct GetLoginNonceResp {

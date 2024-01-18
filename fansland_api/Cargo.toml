@@ -34,3 +34,5 @@ redis_pool = "0.3"
 fansland_sign = { path = "../fansland_sign" }
 fansland_common = { path = "../fansland_common" }
 jsonwebtoken = "9.2.0"
+uuid = { version = "1.6.1", features = ["v4"] }
+rand = "0.8.5"

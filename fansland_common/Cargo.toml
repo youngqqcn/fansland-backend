@@ -21,3 +21,4 @@ diesel_migrations = "2"
 # rbson = "2.0.3"
 jsonwebtoken = "9.2.0"
 getset = "0.1.2"
+uuid = { version = "1.6.1", features = ["v8"] }
