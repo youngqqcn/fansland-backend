@@ -11,12 +11,6 @@ pub struct JWTToken {
 }
 
 impl JWTToken {
-    /**
-     *method:create_token
-     *desc:create token
-     *author:String
-     *email:348040933@qq.com
-     */
     pub fn create_token(&self, secret: &str) -> Result<String, Error> {
         return match encode(
             &Header::default(),
@@ -41,7 +35,7 @@ impl JWTToken {
         ) {
             Ok(c) => Ok(c.claims),
             Err(err) => match *err.kind() {
-                ErrorKind::InvalidToken => return Err(Error::from("Token失效")), // Example on how to handle a specific error
+                ErrorKind::InvalidToken => return Err(Error::from("invalid token")), // Example on how to handle a specific error
                 ErrorKind::InvalidIssuer => return Err(Error::from("InvalidIssuer")), // Example on how to handle a specific error
                 _ => return Err(Error::from("InvalidToken other errors")),
             },
