@@ -56,7 +56,7 @@ pub struct GetLoginNonceResp {
 // get tickets by secret token
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct GetTicketsBySecretToken {
-    pub address: String, // 地址
+    // pub address: String, // 地址
     pub token: String,   // token
     pub passwd: String,  // 密码hash
 }

@@ -20,10 +20,7 @@ use crate::{
     },
     extract::JsonReq,
     model::*,
-    schema::{
-        tickets::ticket_type_id,
-        users::{self},
-    },
+    schema::users::{self},
 };
 use ethers::types::{Address, Signature};
 use rand::Rng;
@@ -111,9 +108,9 @@ pub async fn get_login_signmsg(
 
     // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
     // 消息设置1个小时过期时间
+    let prefix_key = "siwemsg:".to_string() + &req.address;
     let _: () = redis::pipe()
-        .del(&req.address)
-        .set(req.address.clone(), msg_template.clone())
+        .set(&prefix_key, msg_template.clone())
         .expire(req.address.clone(), 10 * 60)
         .ignore()
         .query_async(&mut rds_conn)
@@ -140,8 +137,9 @@ pub async fn sign_in_with_ethereum(
     tracing::debug!("===========从redis获取msg== ",);
 
     // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
+    let siwemsg_prefix_key = "siwemsg:".to_string() + &lrq.address;
     let msg = match redis::cmd("GET")
-        .arg(lrq.address.clone())
+        .arg(&siwemsg_prefix_key)
         .query_async::<_, Option<String>>(&mut rds_conn)
         .await
         .map_err(new_internal_error)?
@@ -167,8 +165,7 @@ pub async fn sign_in_with_ethereum(
 
     tracing::debug!("============验证签名成功");
 
-    // TODO: 生成token
-    // let token = String::from("token-todo-expire");
+    //  生成token
     let mut jwt_token = JWTToken::default();
     jwt_token.set_user_address(lrq.address.clone());
     jwt_token.set_exp(
@@ -181,12 +178,13 @@ pub async fn sign_in_with_ethereum(
     let token = jwt_token
         .create_token(TOKEN_SECRET)
         .map_err(new_internal_error)?;
+    let authtoken_prefix_key = "authtoken:".to_string() + &lrq.address;
 
     // 删除之前的msg,然后将token插入redis, 并设置过期时间为1天
     let _: () = redis::pipe()
-        .del(&lrq.address)
-        .set(&lrq.address, &token)
-        .expire(&lrq.address, 24 * 60 * 60)
+        .del(&siwemsg_prefix_key)
+        .set(&authtoken_prefix_key, &token)
+        .expire(&authtoken_prefix_key, 24 * 60 * 60)
         .ignore()
         .query_async(&mut rds_conn)
         .await
@@ -294,46 +292,47 @@ pub async fn get_tickets_by_secret_link(
     State(app_state): State<AppState>,
     JsonReq(secret_token_req): JsonReq<GetTicketsBySecretToken>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    // 组装key
+    let req = secret_token_req.clone();
+    let token_key = "slink:token:".to_string() + &req.token + &req.passwd;
+    // let address_key = "slink:address:".to_string() + &req.address;
+
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
+        .await
+        .map_err(new_internal_error)?;
+
+    // 查询redis中的key
+    let req_address = match redis::cmd("GET")
+        .arg(&token_key)
+        .query_async::<_, Option<String>>(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?
+    {
+        Some(k) => k,
+        None => {
+            return new_api_error("invalid secret token".to_string());
+        }
+    };
+
     let conn = app_state
         .psql_pool
         .get()
         .await
         .map_err(new_internal_error)?;
-    let req = secret_token_req.clone();
 
-    // 查询用户
-    let res: Vec<User> = conn
-        .interact(|conn| {
-            use crate::schema::users::dsl::*;
-            users
-                .filter(user_address.eq(req.address))
-                .filter(token.eq(req.token))
-                .filter(passwd.eq(req.passwd))
-                .load(conn)
-
-            // use crate::schema::tickets::dsl::*;
-            // tickets.filter(user_id.eq(uid)).load(conn)
+    let ret: Vec<Ticket> = conn
+        .interact(move |conn| {
+            use crate::schema::tickets::dsl::*;
+            tickets.filter(user_address.eq(req_address)).load(conn)
         })
         .await
         .map_err(new_internal_error)?
         .map_err(new_internal_error)?;
 
-    if let Some(usr) = res.get(0) {
-        // 获取该用户所有的票
-        let usr_address = usr.user_address.clone();
-        let ret: Vec<Ticket> = conn
-            .interact(move |conn| {
-                use crate::schema::tickets::dsl::*;
-                tickets.filter(user_address.eq(usr_address)).load(conn)
-            })
-            .await
-            .map_err(new_internal_error)?
-            .map_err(new_internal_error)?;
-
-        return Ok(RespVO::from(&ret).resp_json());
-    }
-
-    return new_api_error("invalid param".to_owned());
+    Ok(RespVO::from(&ret).resp_json())
 }
 
 // 更新密码
@@ -344,31 +343,61 @@ pub async fn update_secret_link_passwd(
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let _ = verify_token(headers, &app_state, req.address.clone()).await?;
 
-    let conn = app_state
-        .psql_pool
-        .get()
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
         .await
         .map_err(new_internal_error)?;
-    let req = req.clone();
 
-    // 查询用户私密链接密码
-    let _res = conn
-        .interact(|conn| {
-            use crate::schema::users::dsl::*;
-            diesel::update(users)
-                .filter(user_address.eq(req.address))
-                .set(passwd.eq(req.passwd))
-                .execute(conn)
-        })
+    tracing::debug!("===========从redis获取msg== ",);
+
+    // 生成随机key
+    let raw_token: String = rand::thread_rng()
+        .sample_iter(rand::distributions::Alphanumeric)
+        .take(20)
+        .map(char::from)
+        .collect();
+
+    let token_key = "slink:token:".to_string() + &raw_token + &req.passwd;
+    let address_key = "slink:address:".to_string() + &req.address;
+
+    // 删除旧的
+    match redis::cmd("GET")
+        .arg(&address_key)
+        .query_async::<_, Option<String>>(&mut rds_conn)
         .await
         .map_err(new_internal_error)?
+    {
+        Some(k) => {
+            tracing::debug!("========删除旧的slink token ======={}", &k);
+            let _: () = redis::pipe()
+                .del(&k)
+                .ignore()
+                .query_async(&mut rds_conn)
+                .await
+                .map_err(new_internal_error)?;
+        }
+        None => (),
+    }
+
+    // 设置新的
+    let _: () = redis::pipe()
+        .set(&token_key, &req.address)
+        .persist(&token_key) // 永不过期
+        .set(&address_key, &token_key)
+        .persist(&address_key) // 永不过期
+        .ignore()
+        .query_async(&mut rds_conn)
+        .await
         .map_err(new_internal_error)?;
 
-    // TODO: create new token
-    let new_token = "new token".to_string();
+    tracing::debug!("====插入redis成功====");
+
+    // let new_token = "new token".to_string();
     Ok(RespVO::from(&UpdateSecretLinkPasswdResp {
         success: true,
-        secret_token: new_token,
+        secret_token: raw_token,
     })
     .resp_json())
 }
@@ -412,15 +441,18 @@ pub async fn verify_token(
     tracing::debug!("token = {}", header_token);
 
     // 查询redis是否存在
+    let prefix_key = "authtoken:".to_string() + &address;
     let redis_token = redis::cmd("GET")
-        .arg(&address)
+        .arg(&prefix_key)
         .query_async::<_, Option<String>>(&mut rds_conn)
         .await
-        .unwrap();
+        .map_err(new_internal_error)?;
     let token = match redis_token {
         Some(rtk) => {
-            if rtk.eq(header_token) {
+            if !rtk.eq(header_token) {
                 tracing::error!("========111 token 与地址不匹配==========");
+                tracing::error!("========redis的token:{}", rtk);
+                tracing::error!("========head的token:{}", header_token);
                 return new_api_error("illegal request".to_string());
             }
             rtk
