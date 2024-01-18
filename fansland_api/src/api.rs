@@ -9,6 +9,12 @@ pub struct QueryAddressReq {
     pub address: String,
 }
 
+#[derive(Default, Deserialize, Clone, Debug, Serialize)]
+pub struct QueryAddressResp {
+    pub address: String,
+    pub email: String,
+}
+
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct BindEmailReq {
     pub address: String,
@@ -65,4 +71,19 @@ pub struct UpdateSecretLinkPasswdReq {
 pub struct UpdateSecretLinkPasswdResp {
     pub success: bool,
     pub secret_token: String,
+}
+
+#[derive(Default, Deserialize, Clone, Debug, Serialize)]
+pub struct QueryAddressTickets {
+    pub user_address: String,
+    pub chain_name: String,
+    pub contract_address: String,
+    pub nft_token_id: i64,
+    pub qrcode: String,
+    pub redeem_status: i32,
+    pub ticket_type_id: i32,
+    pub ticket_type_name: String,
+    pub ticket_price: i32,
+    pub event_name: String,
+    pub event_time: String,
 }

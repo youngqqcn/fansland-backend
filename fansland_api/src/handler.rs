@@ -15,12 +15,15 @@ use tracing::warn;
 use crate::{
     api::{
         BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp, GetTicketsBySecretToken,
-        LoginByAddressReq, LoginByAddressResp, QueryAddressReq, UpdateSecretLinkPasswdReq,
-        UpdateSecretLinkPasswdResp,
+        LoginByAddressReq, LoginByAddressResp, QueryAddressReq, QueryAddressResp,
+        QueryAddressTickets, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
     model::*,
-    schema::users::{self},
+    schema::{
+        tickets::ticket_type_id,
+        users::{self},
+    },
 };
 use ethers::types::{Address, Signature};
 use rand::Rng;
@@ -109,6 +112,7 @@ pub async fn get_login_signmsg(
     // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
     // 消息设置1个小时过期时间
     let _: () = redis::pipe()
+        .del(&req.address)
         .set(req.address.clone(), msg_template.clone())
         .expire(req.address.clone(), 10 * 60)
         .ignore()
@@ -180,16 +184,14 @@ pub async fn sign_in_with_ethereum(
 
     // 删除之前的msg,然后将token插入redis, 并设置过期时间为1天
     let _: () = redis::pipe()
-        .del(lrq.address.clone())
-        .set(&token, lrq.address.clone())
-        .expire(&token, 24 * 60 * 60)
+        .del(&lrq.address)
+        .set(&lrq.address, &token)
+        .expire(&lrq.address, 24 * 60 * 60)
         .ignore()
         .query_async(&mut rds_conn)
         .await
         .map_err(new_internal_error)?;
     tracing::debug!("插入redis成功");
-
-    // TODO: 插入数据库？
 
     // 返回鉴权token
     Ok(RespVO::from(&LoginByAddressResp {
@@ -206,6 +208,7 @@ pub async fn query_user_by_address(
     JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let _ = verify_token(headers, &app_state, req.address.clone()).await?;
+    let req_copy = req.clone();
 
     let conn = app_state
         .psql_pool
@@ -215,13 +218,26 @@ pub async fn query_user_by_address(
     let res: Vec<User> = conn
         .interact(move |conn| {
             use crate::schema::users::dsl::*;
-            users.filter(user_address.eq(req.address)).load(conn)
+            users
+                .filter(user_address.eq(&req.address.clone()))
+                .load(conn)
         })
         .await
         .map_err(new_internal_error)?
         .map_err(new_internal_error)?;
 
-    Ok(RespVO::from(&res).resp_json())
+    let r = match res.get(0) {
+        Some(u) => QueryAddressResp {
+            address: u.user_address.clone(),
+            email: u.email.clone(),
+        },
+        None => QueryAddressResp {
+            address: req_copy.address,
+            email: "".to_string(),
+        },
+    };
+
+    Ok(RespVO::from(&r).resp_json())
 }
 
 // list tickets
@@ -238,10 +254,9 @@ pub async fn query_tickets_by_address(
         .get()
         .await
         .map_err(new_internal_error)?;
-    //TODO: 在中间件中校验token的合法性
 
     // 获取该用户所有的票
-    let ret: Vec<Ticket> = conn
+    let ret_tickets: Vec<Ticket> = conn
         .interact(move |conn| {
             use crate::schema::tickets::dsl::*;
             tickets.filter(user_address.eq(req.address)).load(conn)
@@ -250,7 +265,28 @@ pub async fn query_tickets_by_address(
         .map_err(new_internal_error)?
         .map_err(new_internal_error)?;
 
-    Ok(RespVO::from(&ret).resp_json())
+    let mut r: Vec<QueryAddressTickets> = Vec::new();
+    for t in &ret_tickets {
+        let qrcode = match t.qrcode.clone() {
+            Some(c) => c,
+            None => "".to_owned(),
+        };
+        r.push(QueryAddressTickets {
+            user_address: t.user_address.clone(),
+            chain_name: t.chain_name.clone(),
+            contract_address: t.contract_address.clone(),
+            nft_token_id: t.nft_token_id.clone(),
+            qrcode: qrcode,
+            redeem_status: t.redeem_status.clone(),
+            ticket_type_id: t.ticket_type_id,
+            ticket_type_name: t.ticket_type_name.clone(),
+            ticket_price: t.ticket_price,
+            event_name: t.event_name.clone(),
+            event_time: t.event_time.clone(),
+        });
+    }
+
+    Ok(RespVO::from(&r).resp_json())
 }
 
 // list tickets by secret link
@@ -343,8 +379,6 @@ pub async fn verify_token(
     app_state: &AppState,
     address: String,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // ) -> Response {
-    // let request = buffer_request_body(request).await?;
     tracing::debug!("==========需要鉴权接口===========");
 
     // 对token进行鉴权
@@ -358,40 +392,48 @@ pub async fn verify_token(
     tracing::debug!("===========从redis获取msg== ");
 
     let hs = headers;
-    for (name, value) in hs.iter() {
-        tracing::debug!("====== {}: {:?}", name, value);
-    }
+    // for (name, value) in hs.iter() {
+    //     tracing::debug!("====== {}: {:?}", name, value);
+    // }
 
     if !hs.contains_key("FanslandAuthToken") {
+        tracing::error!("====缺少请求头  111==========");
         return new_api_error("miss header".to_string());
     }
 
     let value = match hs.get("FanslandAuthToken") {
         Some(k) => k,
         None => {
+            tracing::error!("====缺少请求头 222==========");
             return new_api_error("miss header".to_string());
         }
     };
-    let token = value.to_str().unwrap(); // TODO: fix
-    tracing::debug!("token = {}", token);
+    let header_token = value.to_str().map_err(new_internal_error)?;
+    tracing::debug!("token = {}", header_token);
 
     // 查询redis是否存在
-    let rk = redis::cmd("GET")
-        .arg(token)
+    let redis_token = redis::cmd("GET")
+        .arg(&address)
         .query_async::<_, Option<String>>(&mut rds_conn)
         .await
         .unwrap();
-    match rk {
-        Some(_) => {}
+    let token = match redis_token {
+        Some(rtk) => {
+            if rtk.eq(header_token) {
+                tracing::error!("========111 token 与地址不匹配==========");
+                return new_api_error("illegal request".to_string());
+            }
+            rtk
+        }
         None => {
             return new_api_error("token expired, please refrese and try again".to_string());
         }
-    }
+    };
 
     // 判断地址是否匹配
-    let jt = JWTToken::verify(TOKEN_SECRET, token).map_err(new_internal_error)?;
+    let jt = JWTToken::verify(TOKEN_SECRET, &token).map_err(new_internal_error)?;
     if !jt.user_address().to_lowercase().eq(&address.to_lowercase()) {
-        tracing::error!("========token 与地址不匹配==========");
+        tracing::error!("========222 token 与地址不匹配==========");
         return new_api_error("illegal requst".to_string());
     }
 

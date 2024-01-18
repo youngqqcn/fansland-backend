@@ -63,7 +63,7 @@ async fn main() {
 
     // build our application with some routes
     let need_auth_routers = Router::new()
-        .route("/queryAddress", post(query_user_by_address))
+        .route("/queryAddressEmail", post(query_user_by_address))
         .route("/bindEmail", post(bind_email))
         .route("/queryTicketsByAddress", post(query_tickets_by_address))
         .route("/updateSlink", post(update_secret_link_passwd));
@@ -85,22 +85,6 @@ async fn main() {
     axum::serve(listener, app_routers).await.unwrap();
 }
 
-// async fn get_test() -> Result<String, String> {
-//     tracing::debug!("===============测试redis================");
-//     let rds_url = std::env::var("REDIS_URL").unwrap();
-//     tracing::debug!("rds_url: {}", rds_url);
-//     let client = Client::open(rds_url).unwrap();
-//     // let conn = client.get_async_connection().await.unwrap();
-//     let mut conn = client
-//         .get_async_connection()
-//         .await
-//         .map_err(|err| err.to_string())?;
-//     conn.set("author", "axum.rs")
-//         .await
-//         .map_err(|err| err.to_string())?;
-//     Ok("Successfully set".to_owned())
-// }
-
 // 处理链接不存在的情况
 async fn fallback(uri: Uri) -> Result<String, (StatusCode, Json<RespVO<String>>)> {
     let msg = format!("NOT FOUND: {}", uri);
@@ -114,15 +98,3 @@ async fn fallback(uri: Uri) -> Result<String, (StatusCode, Json<RespVO<String>>)
         }),
     ))
 }
-// async fn fallback(uri: Uri) -> impl IntoResponse {
-//     let msg = format!("not found: {}", uri);
-//     warn!("{}", msg.clone());
-//     RespVO::<String> {
-//         code: Some(-1),
-//         msg: Some(msg),
-//         data: None,
-//     }
-//     .resp_json()
-// }
-
-//====================
