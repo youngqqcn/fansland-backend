@@ -5,8 +5,7 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 use chrono::Utc;
-use fansland_common::{error::Error, jwt::JWTToken, RespVO};
-// use fansland_sign::verify_signature;
+use fansland_common::{jwt::JWTToken, RespVO};
 
 use diesel::prelude::*;
 use redis_pool::RedisPool;
@@ -379,6 +378,7 @@ pub async fn update_secret_link_passwd(
         .take(20)
         .map(char::from)
         .collect();
+    
 
     let token_key = "slink:token:".to_string() + &raw_token + &req.passwd;
     let address_key = "slink:address:".to_string() + &req.address;
