@@ -372,15 +372,25 @@ pub async fn update_secret_link_passwd(
 
     tracing::debug!("===========从redis获取msg== ",);
 
-    // 生成随机key
+    // 生成随机token
     let raw_token: String = rand::thread_rng()
         .sample_iter(rand::distributions::Alphanumeric)
-        .take(20)
+        .take(10)
         .map(char::from)
         .collect();
-    
 
-    let token_key = "slink:token:".to_string() + &raw_token + &req.passwd;
+    tracing::debug!("raw_token: {}", raw_token);
+    // 组装token
+    let mut bz_token: Vec<u8> = Vec::new();
+    bz_token.extend_from_slice(raw_token.as_bytes()); // 追加 raw_token
+    bz_token.extend(
+        hex::decode(&req.address.to_lowercase().replace("0x", "").to_owned())
+            .map_err(new_internal_error)?,
+    ); // 追加地址
+    let b64_token = base64_url::encode(&bz_token);
+
+
+    let token_key = "slink:token:".to_string() + &b64_token + &req.passwd;
     let address_key = "slink:address:".to_string() + &req.address;
 
     // 删除旧的
@@ -418,7 +428,7 @@ pub async fn update_secret_link_passwd(
     // let new_token = "new token".to_string();
     Ok(RespVO::from(&UpdateSecretLinkPasswdResp {
         success: true,
-        secret_token: raw_token,
+        secret_token: b64_token,
     })
     .resp_json())
 }
