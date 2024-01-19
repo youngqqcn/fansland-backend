@@ -16,12 +16,12 @@ use crate::handler::{
     query_user_by_address, sign_in_with_ethereum, update_secret_link_passwd, AppState,
 };
 
-pub mod api;
-pub mod auth;
+mod api;
+mod auth;
 mod extract;
-pub mod handler;
-pub mod model;
-pub mod schema;
+mod handler;
+mod model;
+mod schema;
 
 #[tokio::main]
 async fn main() {
