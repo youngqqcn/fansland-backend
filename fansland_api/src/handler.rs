@@ -323,7 +323,7 @@ pub async fn get_tickets_by_secret_link(
         .await
         .map_err(new_internal_error)?;
 
-    let ret: Vec<Ticket> = conn
+    let ret_tickets: Vec<Ticket> = conn
         .interact(move |conn| {
             use crate::schema::tickets::dsl::*;
             tickets.filter(user_address.eq(req_address)).load(conn)
@@ -332,7 +332,28 @@ pub async fn get_tickets_by_secret_link(
         .map_err(new_internal_error)?
         .map_err(new_internal_error)?;
 
-    Ok(RespVO::from(&ret).resp_json())
+    let mut r: Vec<QueryAddressTickets> = Vec::new();
+    for t in &ret_tickets {
+        let qrcode = match t.qrcode.clone() {
+            Some(c) => c,
+            None => "".to_owned(),
+        };
+        r.push(QueryAddressTickets {
+            user_address: t.user_address.clone(),
+            chain_name: t.chain_name.clone(),
+            contract_address: t.contract_address.clone(),
+            nft_token_id: t.nft_token_id.clone(),
+            qrcode: qrcode,
+            redeem_status: t.redeem_status.clone(),
+            ticket_type_id: t.ticket_type_id,
+            ticket_type_name: t.ticket_type_name.clone(),
+            ticket_price: t.ticket_price,
+            event_name: t.event_name.clone(),
+            event_time: t.event_time.clone(),
+        });
+    }
+
+    Ok(RespVO::from(&r).resp_json())
 }
 
 // 更新密码
