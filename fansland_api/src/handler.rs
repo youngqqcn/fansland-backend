@@ -7,19 +7,17 @@ use axum::{
 use chrono::Utc;
 use fansland_common::{jwt::JWTToken, RespVO};
 
-use diesel::prelude::*;
-use redis_pool::RedisPool;
+use redis_pool::{connection::RedisPoolConnection, RedisPool};
 use tracing::warn;
 
 use crate::{
     api::{
-        BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp, GetTicketsBySecretToken,
-        LoginByAddressReq, LoginByAddressResp, QueryAddressReq, QueryAddressResp,
-        QueryAddressTickets, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
+        BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
+        GetTicketQrCodeBySecretToken, LoginByAddressReq, LoginByAddressResp, QueryAddressReq,
+        QueryAddressResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, UpdateSecretLinkPasswdReq,
+        UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
-    model::*,
-    schema::users::{self},
 };
 use ethers::types::{Address, Signature};
 use rand::Rng;
@@ -28,16 +26,13 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use deadpool_diesel::{Manager, Pool};
-use diesel::PgConnection;
-// use fansland_common::RespVO;
 use redis::{aio::Connection, Client};
 
 const TOKEN_SECRET: &str = "GXFC@Fansland.io@2024";
 
 #[derive(Clone)]
 pub struct AppState {
-    pub psql_pool: Pool<Manager<PgConnection>>,
+    // pub psql_pool: Pool<Manager<PgConnection>>,
     pub rds_pool: RedisPool<Client, Connection>,
 }
 
@@ -48,31 +43,30 @@ pub async fn bind_email(
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let _ = verify_token(headers, &app_state, req.address.clone()).await?;
 
-    let conn = app_state
-        .psql_pool
-        .get()
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
         .await
         .map_err(new_internal_error)?;
-    let _ = conn
-        .interact(move |conn| {
-            // TODO: 判断地址是否存在？
-            // TODO: 判断邮箱是否存在
-            let xuser = CreateUser {
-                user_address: req.address,
-                email: req.email,
-                nonce: "noce".to_string(),
-                token: "token".to_string(),
-            };
 
-            diesel::insert_into(users::table)
-                .values(xuser)
-                .returning(User::as_returning())
-                .get_result(conn)
-        })
+    // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
+    // 消息设置1个小时过期时间
+    let prefix_key = "bindemail:".to_string() + &req.address;
+    let _: () = redis::pipe()
+        .set(&prefix_key, req.email.clone())
+        .persist(&prefix_key) // 持久
+        .ignore()
+        .query_async(&mut rds_conn)
         .await
-        .map_err(new_internal_error)?
         .map_err(new_internal_error)?;
-    Ok(RespVO::from(&BindEmailResp { success: true }).resp_json())
+
+    Ok(RespVO::from(&BindEmailResp {
+        success: true,
+        address: req.address,
+        email: req.email,
+    })
+    .resp_json())
 }
 
 // get login nonce
@@ -81,7 +75,7 @@ pub async fn get_login_signmsg(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<GetLoginNonceReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let msg_domain = "localhost:8000";
+    let msg_domain = "localhost:8000"; // TODO: 换成生成环境
     let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
     let msg_timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let msg_template = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland!\n\nURI: {}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
@@ -205,91 +199,104 @@ pub async fn query_user_by_address(
     JsonReq(req): JsonReq<QueryAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let _ = verify_token(headers, &app_state, req.address.clone()).await?;
-    let req_copy = req.clone();
 
-    let conn = app_state
-        .psql_pool
-        .get()
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
         .await
         .map_err(new_internal_error)?;
-    let res: Vec<User> = conn
-        .interact(move |conn| {
-            use crate::schema::users::dsl::*;
-            users
-                .filter(user_address.eq(&req.address.clone()))
-                .load(conn)
-        })
+
+    tracing::debug!("=从redis获取绑定邮箱== ",);
+
+    // 设置该地址的签名msg, 验证签名的时候，直接从redis中获取即可
+    let prefix_key = "bindemail:".to_string() + &req.address;
+    let user_email = match redis::cmd("GET")
+        .arg(&prefix_key)
+        .query_async::<_, Option<String>>(&mut rds_conn)
         .await
         .map_err(new_internal_error)?
+    {
+        Some(m) => m,
+        None => "".to_owned(),
+    };
+
+    Ok(RespVO::from(&QueryAddressResp {
+        address: req.address,
+        email: user_email,
+    })
+    .resp_json())
+}
+
+// list tickets
+pub async fn query_ticket_qrcode_by_address(
+    headers: HeaderMap,
+    State(app_state): State<AppState>,
+    JsonReq(req): JsonReq<QueryTicketQrCodeReq>,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let _ = verify_token(headers, &app_state, req.address.clone()).await?;
+
+    // 使用redis
+    let rds_conn = app_state
+        .rds_pool
+        .aquire()
+        .await
         .map_err(new_internal_error)?;
 
-    let r = match res.get(0) {
-        Some(u) => QueryAddressResp {
-            address: u.user_address.clone(),
-            email: u.email.clone(),
-        },
-        None => QueryAddressResp {
-            address: req_copy.address,
-            email: "".to_string(),
-        },
+    tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
+
+    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id).await
+}
+
+pub async fn query_ticket_qrcode_by_token_id(
+    mut rds_conn: RedisPoolConnection<Connection>,
+    address: String,
+    token_id: u32,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
+
+    // 从redis中获取该token_id的owner
+    let prefix_key = "tokenid:owner:".to_string() + &token_id.to_string();
+    let token_id_owner = match redis::cmd("GET")
+        .arg(&prefix_key)
+        .query_async::<_, Option<String>>(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?
+    {
+        Some(m) => m,
+        None => "".to_owned(),
+    };
+
+    // 比对redis中的owner与参数中的owner是否相同
+    if !token_id_owner.eq(&address) {
+        return new_api_error(
+            "transaction of this token may be pending now, please wait for a while.".to_string(),
+        );
+    }
+
+    // 根据算法生成二维码
+    let salt = "QrCode@fansland.io2024-888"; // TODO:
+    let hash_msg =
+        String::new() + "ContractAddress" + &token_id.to_string() + &token_id_owner + salt;
+    let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
+    let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
+    let qrcode = hex::encode(bz_qrcode);
+
+    let r = QueryTicketQrCodeResp {
+        user_address: address,
+        nft_token_id: token_id,
+        qrcode: qrcode,
+        redeem_status: 0,
+        type_id: 0,
     };
 
     Ok(RespVO::from(&r).resp_json())
 }
 
-// list tickets
-pub async fn query_tickets_by_address(
-    // Path(addr): Path<String>,
-    headers: HeaderMap,
+// 私密链接查询门票二维码
+pub async fn get_ticket_qrcode_by_secret_link(
     State(app_state): State<AppState>,
-    JsonReq(req): JsonReq<QueryAddressReq>,
-) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let _ = verify_token(headers, &app_state, req.address.clone()).await?;
-
-    let conn = app_state
-        .psql_pool
-        .get()
-        .await
-        .map_err(new_internal_error)?;
-
-    // 获取该用户所有的票
-    let ret_tickets: Vec<Ticket> = conn
-        .interact(move |conn| {
-            use crate::schema::tickets::dsl::*;
-            tickets.filter(user_address.eq(req.address)).load(conn)
-        })
-        .await
-        .map_err(new_internal_error)?
-        .map_err(new_internal_error)?;
-
-    let mut r: Vec<QueryAddressTickets> = Vec::new();
-    for t in &ret_tickets {
-        let qrcode = match t.qrcode.clone() {
-            Some(c) => c,
-            None => "".to_owned(),
-        };
-        r.push(QueryAddressTickets {
-            user_address: t.user_address.clone(),
-            chain_name: t.chain_name.clone(),
-            contract_address: t.contract_address.clone(),
-            nft_token_id: t.nft_token_id.clone(),
-            qrcode: qrcode,
-            redeem_status: t.redeem_status.clone(),
-            ticket_type_id: t.ticket_type_id,
-            ticket_type_name: t.ticket_type_name.clone(),
-            ticket_price: t.ticket_price,
-            event_name: t.event_name.clone(),
-            event_time: t.event_time.clone(),
-        });
-    }
-
-    Ok(RespVO::from(&r).resp_json())
-}
-
-// list tickets by secret link
-pub async fn get_tickets_by_secret_link(
-    State(app_state): State<AppState>,
-    JsonReq(secret_token_req): JsonReq<GetTicketsBySecretToken>,
+    JsonReq(secret_token_req): JsonReq<GetTicketQrCodeBySecretToken>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     // 组装key
     let req = secret_token_req.clone();
@@ -316,43 +323,12 @@ pub async fn get_tickets_by_secret_link(
         }
     };
 
-    let conn = app_state
-        .psql_pool
-        .get()
-        .await
-        .map_err(new_internal_error)?;
-
-    let ret_tickets: Vec<Ticket> = conn
-        .interact(move |conn| {
-            use crate::schema::tickets::dsl::*;
-            tickets.filter(user_address.eq(req_address)).load(conn)
-        })
-        .await
-        .map_err(new_internal_error)?
-        .map_err(new_internal_error)?;
-
-    let mut r: Vec<QueryAddressTickets> = Vec::new();
-    for t in &ret_tickets {
-        let qrcode = match t.qrcode.clone() {
-            Some(c) => c,
-            None => "".to_owned(),
-        };
-        r.push(QueryAddressTickets {
-            user_address: t.user_address.clone(),
-            chain_name: t.chain_name.clone(),
-            contract_address: t.contract_address.clone(),
-            nft_token_id: t.nft_token_id.clone(),
-            qrcode: qrcode,
-            redeem_status: t.redeem_status.clone(),
-            ticket_type_id: t.ticket_type_id,
-            ticket_type_name: t.ticket_type_name.clone(),
-            ticket_price: t.ticket_price,
-            event_name: t.event_name.clone(),
-            event_time: t.event_time.clone(),
-        });
+    if !req_address.eq(&req.address) {
+        return new_api_error("invalid secret token".to_string());
     }
 
-    Ok(RespVO::from(&r).resp_json())
+    // 查询门票二维码
+    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id).await
 }
 
 // 更新密码
@@ -388,7 +364,6 @@ pub async fn update_secret_link_passwd(
             .map_err(new_internal_error)?,
     ); // 追加地址
     let b64_token = base64_url::encode(&bz_token);
-
 
     let token_key = "slink:token:".to_string() + &b64_token + &req.passwd;
     let address_key = "slink:address:".to_string() + &req.address;

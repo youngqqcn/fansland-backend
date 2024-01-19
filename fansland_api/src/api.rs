@@ -24,6 +24,8 @@ pub struct BindEmailReq {
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct BindEmailResp {
     pub success: bool,
+    pub address: String,
+    pub email: String,
 }
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
@@ -53,13 +55,7 @@ pub struct GetLoginNonceResp {
     pub signmsg: String,
 }
 
-// get tickets by secret token
-#[derive(Deserialize, Clone, Debug, Serialize)]
-pub struct GetTicketsBySecretToken {
-    // pub address: String, // 地址
-    pub token: String,   // token
-    pub passwd: String,  // 密码hash
-}
+
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct UpdateSecretLinkPasswdReq {
@@ -73,17 +69,32 @@ pub struct UpdateSecretLinkPasswdResp {
     pub secret_token: String,
 }
 
+// get tickets by secret token
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct GetTicketQrCodeBySecretToken {
+    pub address: String, // 地址
+    pub token: String,  // token
+    pub passwd: String, // 密码hash
+    pub token_id: u32, // token
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryTicketQrCodeReq {
+    pub address: String,
+    pub token_id: u32, // token_id
+}
+
 #[derive(Default, Deserialize, Clone, Debug, Serialize)]
-pub struct QueryAddressTickets {
+pub struct QueryTicketQrCodeResp {
     pub user_address: String,
-    pub chain_name: String,
-    pub contract_address: String,
-    pub nft_token_id: i64,
+    // pub chain_name: String,
+    // pub contract_address: String,
+    pub nft_token_id: u32,
     pub qrcode: String,
-    pub redeem_status: i32,
-    pub ticket_type_id: i32,
-    pub ticket_type_name: String,
-    pub ticket_price: i32,
-    pub event_name: String,
-    pub event_time: String,
+    pub redeem_status: u32,
+    pub type_id: u32,
+    // pub ticket_type_name: String,
+    // pub ticket_price: String,
+    // pub event_name: String,
+    // pub event_time: String,
 }

@@ -12,16 +12,15 @@ use tracing::{warn, Level};
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_login_signmsg, get_tickets_by_secret_link, query_tickets_by_address,
-    query_user_by_address, sign_in_with_ethereum, update_secret_link_passwd, AppState,
+    bind_email, get_login_signmsg, get_ticket_qrcode_by_secret_link,
+    query_ticket_qrcode_by_address, query_user_by_address, sign_in_with_ethereum,
+    update_secret_link_passwd, AppState,
 };
 
 mod api;
 mod auth;
 mod extract;
 mod handler;
-mod model;
-mod schema;
 
 #[tokio::main]
 async fn main() {
@@ -39,25 +38,12 @@ async fn main() {
         .with_max_level(Level::DEBUG)
         .init();
 
-    let db_url = std::env::var("DATABASE_URL").unwrap();
-
-    // set up connection pool
-    let manager = deadpool_diesel::postgres::Manager::new(db_url, deadpool_diesel::Runtime::Tokio1);
-    let pool = deadpool_diesel::postgres::Pool::builder(manager)
-        .build()
-        .unwrap();
-
     let rds_url = std::env::var("REDIS_URL").unwrap();
     tracing::debug!("rds_url: {}", rds_url);
     let client = Client::open(rds_url).unwrap();
     let redis_pool = RedisPool::from(client);
 
-    // match get_test().await {
-    //     Ok(value) => println!("xxx"),
-    //     Err(error) => tracing::error!("redis error:{}", error),
-    // }
     let app_state = AppState {
-        psql_pool: pool,
         rds_pool: redis_pool.clone(),
     };
 
@@ -65,11 +51,11 @@ async fn main() {
     let need_auth_routers = Router::new()
         .route("/queryAddressEmail", post(query_user_by_address))
         .route("/bindEmail", post(bind_email))
-        .route("/queryTicketsByAddress", post(query_tickets_by_address))
+        .route("/queryQrCodeByAddress", post(query_ticket_qrcode_by_address))
         .route("/updateSlink", post(update_secret_link_passwd));
 
     let noneed_auth_routers = Router::new()
-        .route("/slink", post(get_tickets_by_secret_link))
+        .route("/queryQrCodeBySlink", post(get_ticket_qrcode_by_secret_link))
         .route("/getSiweMsg", post(get_login_signmsg))
         .route("/signInWithEthereum", post(sign_in_with_ethereum));
 
