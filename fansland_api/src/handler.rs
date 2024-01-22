@@ -75,7 +75,7 @@ pub async fn get_login_signmsg(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<GetLoginNonceReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let msg_domain = "localhost:8000"; // TODO: 换成生成环境
+    let msg_domain = "192.168.110.240:8000"; // TODO: 换成生成环境
     let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
     let msg_timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let msg_template = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland!\n\nURI: {}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
@@ -286,8 +286,8 @@ pub async fn query_ticket_qrcode_by_token_id(
         user_address: address,
         nft_token_id: token_id,
         qrcode: qrcode,
-        redeem_status: 0,
-        type_id: 0,
+        // redeem_status: 0,
+        // type_id: 0,
     };
 
     Ok(RespVO::from(&r).resp_json())
