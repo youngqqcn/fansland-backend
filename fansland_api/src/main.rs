@@ -18,7 +18,6 @@ use crate::handler::{
 };
 
 mod api;
-mod auth;
 mod extract;
 mod handler;
 
