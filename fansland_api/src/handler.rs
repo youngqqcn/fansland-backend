@@ -138,14 +138,33 @@ pub async fn sign_in_with_ethereum(
         .map_err(new_internal_error)?
     {
         Some(m) => m,
-        None => return new_api_error("not found msg, please get new sign msg again".to_string()),
+        None => {
+            // return new_api_error("not found msg, please get new sign msg again".to_string())},
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(RespVO::<String> {
+                    code: Some(10003),
+                    msg: Some("signature msg is expired".to_owned()),
+                    data: None,
+                }),
+            ));
+        }
     };
 
     // 比对msg是否相同
     tracing::debug!("===========msg == {}", msg);
     if !msg.eq(&login_req.msg) {
         tracing::warn!("msg is not match");
-        return new_api_error("invalid sig".to_string());
+        // return new_api_error("invalid sig".to_string());
+
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10002),
+                msg: Some("signature msg is illegal".to_owned()),
+                data: None,
+            }),
+        ));
     }
     tracing::debug!("===========msg比对成功 ");
 
@@ -269,15 +288,20 @@ pub async fn query_ticket_qrcode_by_token_id(
 
     // 比对redis中的owner与参数中的owner是否相同
     if !token_id_owner.eq(&address) {
-        return new_api_error(
-            "transaction of this token may be pending now, please wait for a while.".to_string(),
-        );
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(RespVO::<String> {
+                code: Some(11001),
+                msg: Some("The NFT ticket is pending. Please wait a few minutes.".to_owned()),
+                data: None,
+            }),
+        ));
     }
 
     // 根据算法生成二维码
     let salt = "QrCode@fansland.io2024-888"; // TODO:
     let hash_msg =
-        String::new() + "ContractAddress" + &token_id.to_string() + &token_id_owner + salt;
+        String::new() + "ContractAddress" + &token_id.to_string() + &token_id_owner + salt; // TODO: 修改合约地址
     let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
     let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
     let qrcode = String::from("1:") + &hex::encode(bz_qrcode);
@@ -319,12 +343,26 @@ pub async fn get_ticket_qrcode_by_secret_link(
     {
         Some(k) => k,
         None => {
-            return new_api_error("invalid secret token".to_string());
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(RespVO::<String> {
+                    code: Some(10011),
+                    msg: Some("link is expired".to_owned()),
+                    data: None,
+                }),
+            ));
         }
     };
 
     if !req_address.eq(&req.address) {
-        return new_api_error("invalid secret token".to_string());
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(RespVO::<String> {
+                code: Some(10012),
+                msg: Some("bad link".to_owned()),
+                data: None,
+            }),
+        ));
     }
 
     // 查询门票二维码
@@ -433,14 +471,28 @@ pub async fn verify_token(
 
     if !hs.contains_key("FanslandAuthToken") {
         tracing::error!("====缺少请求头  111==========");
-        return new_api_error("miss header".to_string());
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(RespVO::<String> {
+                code: Some(10001),
+                msg: Some("unauthorized".to_owned()),
+                data: None,
+            }),
+        ));
     }
 
     let value = match hs.get("FanslandAuthToken") {
         Some(k) => k,
         None => {
             tracing::error!("====缺少请求头 222==========");
-            return new_api_error("miss header".to_string());
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(RespVO::<String> {
+                    code: Some(10001),
+                    msg: Some("unauthorized".to_owned()),
+                    data: None,
+                }),
+            ));
         }
     };
     let header_token = value.to_str().map_err(new_internal_error)?;
@@ -459,12 +511,27 @@ pub async fn verify_token(
                 tracing::error!("========111 token 与地址不匹配==========");
                 tracing::error!("========redis的token:{}", rtk);
                 tracing::error!("========head的token:{}", header_token);
-                return new_api_error("illegal request".to_string());
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(RespVO::<String> {
+                        code: Some(10009),
+                        msg: Some("illegal request".to_owned()),
+                        data: None,
+                    }),
+                ));
             }
             rtk
         }
         None => {
-            return new_api_error("token expired, please refrese and try again".to_string());
+            // token不存在，token过期
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(RespVO::<String> {
+                    code: Some(10099),
+                    msg: Some("token expired".to_owned()),
+                    data: None,
+                }),
+            ));
         }
     };
 
@@ -472,7 +539,14 @@ pub async fn verify_token(
     let jt = JWTToken::verify(TOKEN_SECRET, &token).map_err(new_internal_error)?;
     if !jt.user_address().to_lowercase().eq(&address.to_lowercase()) {
         tracing::error!("========222 token 与地址不匹配==========");
-        return new_api_error("illegal requst".to_string());
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10009),
+                msg: Some("illegal request".to_owned()),
+                data: None,
+            }),
+        ));
     }
 
     tracing::debug!("=========token与地址匹配=========");
@@ -481,38 +555,41 @@ pub async fn verify_token(
     Ok(().into_response())
 }
 
+// 10000: 服务器内部错误
+// 10001: unauthorized 未鉴权
+// 10002: signature msg is illegal 签名消息不合法
+// 10003: signature msg is expired 签名消息过期
+// 10009: illegal request 非法请求
+// 10011: link is expired 私密链接过期
+// 10012: bad link 私密链接请求非法
+// 11001: nft ticket is pending, please wait few minutes 门票二维码还在生成中，请稍等几分钟
+// 10099: token expired token过期
+
 fn new_internal_error<E>(err: E) -> (StatusCode, Json<RespVO<String>>)
 where
     E: std::error::Error,
 {
-    let msg = format!("INTERNAL_SERVER_ERROR: {}", err.to_string());
+    let msg = format!("server error: {}", err.to_string());
     warn!("{}", msg.clone());
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(RespVO::<String> {
-            code: Some(-1),
+            code: Some(10000),
             msg: Some(msg),
             data: None,
         }),
     )
 }
 
-// fn map_api_error<E>(err: E) -> Error
-// where
-//     E: std::error::Error,
-// {
-//     Error::E(err.to_string())
+// fn new_api_error(err: String) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+//     let msg = format!("server error: : {}", err.to_string());
+//     warn!("{}", msg.clone());
+//     Err((
+//         StatusCode::INTERNAL_SERVER_ERROR,
+//         Json(RespVO::<String> {
+//             code: Some(10000),
+//             msg: Some(msg),
+//             data: None,
+//         }),
+//     ))
 // }
-
-fn new_api_error(err: String) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let msg = format!("INTERNAL_SERVER_ERROR: {}", err.to_string());
-    warn!("{}", msg.clone());
-    Err((
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(RespVO::<String> {
-            code: Some(-1),
-            msg: Some(msg),
-            data: None,
-        }),
-    ))
-}

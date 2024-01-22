@@ -9,13 +9,13 @@ extern crate getset;
 use axum::{body::Body, response::Response};
 use error::Error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-pub const CODE_SUCCESS: i8 = 0;
-pub const CODE_FAIL: i8 = -1;
+pub const CODE_SUCCESS: i32 = 0;
+pub const CODE_FAIL: i32 = -1;
 
 /// http接口返回模型结构，提供基础的 code，msg，data 等json数据结构
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RespVO<T> {
-    pub code: Option<i8>,
+    pub code: Option<i32>,
     pub msg: Option<String>,
     pub data: Option<T>,
 }
@@ -56,7 +56,7 @@ where
         }
     }
 
-    pub fn from_error_info(code: i8, info: &str) -> Self {
+    pub fn from_error_info(code: i32, info: &str) -> Self {
         Self {
             code: Some(code),
             msg: Some(info.to_string()),
