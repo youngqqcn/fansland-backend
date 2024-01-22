@@ -104,7 +104,7 @@ pub async fn get_login_signmsg(
     let prefix_key = "siwemsg:".to_string() + &req.address;
     let _: () = redis::pipe()
         .set(&prefix_key, msg_template.clone())
-        .expire(req.address.clone(), 10 * 60)
+        .expire(prefix_key, 10 * 60)
         .ignore()
         .query_async(&mut rds_conn)
         .await
@@ -256,7 +256,7 @@ pub async fn query_ticket_qrcode_by_token_id(
     tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
 
     // 从redis中获取该token_id的owner
-    let prefix_key = "tokenid:owner:".to_string() + &token_id.to_string();
+    let prefix_key = "nft:tokenid:owner:".to_string() + &token_id.to_string();
     let token_id_owner = match redis::cmd("GET")
         .arg(&prefix_key)
         .query_async::<_, Option<String>>(&mut rds_conn)
