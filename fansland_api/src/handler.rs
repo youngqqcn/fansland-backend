@@ -280,7 +280,7 @@ pub async fn query_ticket_qrcode_by_token_id(
         String::new() + "ContractAddress" + &token_id.to_string() + &token_id_owner + salt;
     let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
     let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
-    let qrcode = hex::encode(bz_qrcode);
+    let qrcode = String::from("1:") + &hex::encode(bz_qrcode);
 
     let r = QueryTicketQrCodeResp {
         user_address: address,
