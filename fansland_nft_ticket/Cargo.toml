@@ -8,14 +8,7 @@ edition = "2021"
 [dependencies]
 
 
-# axum = { version = "0.7.4", features = ["macros"] }
-chrono = { version = "0.4.31", features = ["serde"] }
-# deadpool-diesel = { version = "0.5.0", features = ["postgres"] }
-# diesel = { version = "2", features = ["chrono", "postgres"] }
-# diesel_migrations = "2"
 dotenv = "0.15.0"
-# serde = { version = "1.0", features = ["derive"] }
-# serde_json = "1"
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -27,11 +20,5 @@ hex = { version = "0.4.3", features = ["serde"] }
 
 redis = { version = "0.24.0", features = ["tokio-comp"] }
 redis_pool = "0.3"
-
-fansland_sign = { path = "../fansland_sign" }
-fansland_common = { path = "../fansland_common" }
-jsonwebtoken = "9.2.0"
-uuid = { version = "1.6.1", features = ["v4"] }
-rand = "0.8.5"
 eyre = "0.6.11"
 ctrlc = "3.4.2"
