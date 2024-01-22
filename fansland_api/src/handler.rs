@@ -75,7 +75,7 @@ pub async fn get_login_signmsg(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<GetLoginNonceReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let msg_domain = "192.168.110.240:8000"; // TODO: 换成生成环境
+    let msg_domain = std::env::var("FANSLAND_WEBSITE_URL").unwrap(); 
     let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
     let msg_timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let msg_template = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland!\n\nURI: {}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
@@ -299,9 +299,13 @@ pub async fn query_ticket_qrcode_by_token_id(
     }
 
     // 根据算法生成二维码
+    let fansland_nft_contract_address = std::env::var("FANSLAND_NFT").unwrap();
     let salt = "QrCode@fansland.io2024-888"; // TODO:
-    let hash_msg =
-        String::new() + "ContractAddress" + &token_id.to_string() + &token_id_owner + salt; // TODO: 修改合约地址
+    let hash_msg = String::new()
+        + &fansland_nft_contract_address
+        + &token_id.to_string()
+        + &token_id_owner
+        + salt;
     let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
     let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
     let qrcode = String::from("1:") + &hex::encode(bz_qrcode);
