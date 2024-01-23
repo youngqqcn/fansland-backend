@@ -7,9 +7,6 @@ use axum::{
 use chrono::Utc;
 use fansland_common::{jwt::JWTToken, RespVO};
 
-use redis_pool::{connection::RedisPoolConnection, RedisPool};
-use tracing::warn;
-
 use crate::{
     api::{
         BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
@@ -21,10 +18,12 @@ use crate::{
 };
 use ethers::types::{Address, Signature};
 use rand::Rng;
+use redis_pool::{connection::RedisPoolConnection, RedisPool};
 use std::{
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tracing::warn;
 
 use redis::{aio::Connection, Client};
 
@@ -72,10 +71,13 @@ pub async fn bind_email(
 // get login nonce
 // pub async fn get_login_nonce(
 pub async fn get_login_signmsg(
+    headers: HeaderMap,
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<GetLoginNonceReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let msg_domain = std::env::var("FANSLAND_WEBSITE_URL").unwrap(); 
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+
+    let msg_domain = std::env::var("FANSLAND_WEBSITE_URL").unwrap();
     let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
     let msg_timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let msg_template = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland!\n\nURI: {}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
@@ -115,9 +117,12 @@ pub async fn get_login_signmsg(
 
 // 钱包登录
 pub async fn sign_in_with_ethereum(
+    headers: HeaderMap,
     State(app_state): State<AppState>,
     JsonReq(login_req): JsonReq<LoginByAddressReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let _ = verify_sig(headers.clone(), login_req.address.clone()).await?;
+
     let lrq = login_req.clone();
 
     // 使用redis
@@ -323,9 +328,12 @@ pub async fn query_ticket_qrcode_by_token_id(
 
 // 私密链接查询门票二维码
 pub async fn get_ticket_qrcode_by_secret_link(
+    headers: HeaderMap,
     State(app_state): State<AppState>,
     JsonReq(secret_token_req): JsonReq<GetTicketQrCodeBySecretToken>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    let _ = verify_sig(headers.clone(), secret_token_req.address.clone()).await?;
+
     // 组装key
     let req = secret_token_req.clone();
     let token_key = "slink:token:".to_string() + &req.token + &req.passwd;
@@ -456,23 +464,17 @@ pub async fn verify_token(
     app_state: &AppState,
     address: String,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    // 验证签名
+    let _ = verify_sig(headers.clone(), address.clone()).await?;
+
     tracing::debug!("==========需要鉴权接口===========");
 
-    // 对token进行鉴权
-    // 使用redis
-    let mut rds_conn = app_state
-        .rds_pool
-        .aquire()
-        .await
-        .map_err(new_internal_error)?;
-
-    tracing::debug!("===========从redis获取msg== ");
-
     let hs = headers;
-    // for (name, value) in hs.iter() {
-    //     tracing::debug!("====== {}: {:?}", name, value);
-    // }
 
+    // let timestamp: String  = match hs.get("FanslandTimestamp") {
+    //     Some(t) => t.to_str().map_err(new_internal_error)?
+    //     None => 0,
+    // }
     if !hs.contains_key("FanslandAuthToken") {
         tracing::error!("====缺少请求头  111==========");
         return Err((
@@ -503,6 +505,16 @@ pub async fn verify_token(
     tracing::debug!("token = {}", header_token);
 
     // 查询redis是否存在
+    // 对token进行鉴权
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
+        .await
+        .map_err(new_internal_error)?;
+
+    tracing::debug!("===========从redis获取msg== ");
+
     let prefix_key = "authtoken:".to_string() + &address;
     let redis_token = redis::cmd("GET")
         .arg(&prefix_key)
@@ -559,10 +571,102 @@ pub async fn verify_token(
     Ok(().into_response())
 }
 
+pub async fn verify_sig(
+    headers: HeaderMap,
+    address: String,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    tracing::debug!("==========需要验证签名接口===========");
+
+    let hs = headers;
+    // for (name, value) in hs.iter() {
+    //     tracing::debug!("====== {}: {:?}", name, value);
+    // }
+    if !hs.contains_key("FanslandTimestamp") || !hs.contains_key("FanslandNonce") {
+        tracing::error!("====缺少请求头  111==========");
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10004),
+                msg: Some("invalid sig".to_owned()),
+                data: None,
+            }),
+        ));
+    }
+
+    let mut api_timestamp = 0_u128;
+    let mut api_nonce = 0_u64;
+    if let Some(ts) = hs.get("FanslandTimestamp") {
+        if let Ok(ts) = ts.to_str() {
+            if let Ok(r) = ts.parse::<u128>() {
+                api_timestamp = r;
+            }
+        }
+    }
+
+    if let Some(nonce_value) = hs.get("FanslandNonce") {
+        if let Ok(nonce_str) = nonce_value.to_str() {
+            if let Ok(nonce) = nonce_str.parse::<u64>() {
+                api_nonce = nonce;
+            }
+        }
+    }
+
+    if api_timestamp < 1705977612000 || api_nonce < 10000 {
+        tracing::error!("====签名字段无效==========");
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10004),
+                msg: Some("invalid sig".to_owned()),
+                data: None,
+            }),
+        ));
+    }
+
+    // 接口签名验签
+    let now_ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(new_internal_error)?
+        .as_millis();
+    // 正负5秒， 即时间窗口有10s
+    if now_ts.abs_diff(api_timestamp) > 10000000 {
+        // TODO: fixme
+        tracing::error!("====时间戳无效==========");
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10004),
+                msg: Some("invalid sig".to_owned()),
+                data: None,
+            }),
+        ));
+    }
+
+    let sig_msg = format!("fansland_{address}_{api_timestamp}_{api_nonce}");
+    tracing::info!(sig_msg);
+    let bz_sig = blake3::hash(sig_msg.as_bytes()).as_bytes().clone();
+    if bz_sig[0] != 0 {
+        tracing::error!("====bz[0]不为0,签名无效==========");
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10004),
+                msg: Some("invalid sig".to_owned()),
+                data: None,
+            }),
+        ));
+    }
+
+    // let rsp = next.run(request).await;
+    Ok(().into_response())
+}
+
 // 10000: 服务器内部错误
 // 10001: unauthorized 未鉴权
 // 10002: signature msg is illegal 签名消息不合法
 // 10003: signature msg is expired 签名消息过期
+// 10004: sig invalid 接口签名无效
+// 10005: invalid timestamp 时间戳无效
 // 10009: illegal request 非法请求
 // 10011: link is expired 私密链接过期
 // 10012: bad link 私密链接请求非法

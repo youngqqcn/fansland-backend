@@ -36,3 +36,4 @@ jsonwebtoken = "9.2.0"
 uuid = { version = "1.6.1", features = ["v4"] }
 rand = "0.8.5"
 base64-url = "2.0.2"
+blake3 = "1.5.0"
