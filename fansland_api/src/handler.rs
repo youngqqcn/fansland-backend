@@ -304,7 +304,7 @@ pub async fn query_ticket_qrcode_by_token_id(
     // 比对redis中的owner与参数中的owner是否相同
     if !token_id_owner.eq(&address) {
         return Err((
-            StatusCode::UNAUTHORIZED,
+            StatusCode::BAD_REQUEST,
             Json(RespVO::<String> {
                 code: Some(11001),
                 msg: Some("The NFT ticket is pending. Please wait a few minutes.".to_owned()),
@@ -366,7 +366,7 @@ pub async fn get_ticket_qrcode_by_secret_link(
         Some(k) => k,
         None => {
             return Err((
-                StatusCode::UNAUTHORIZED,
+                StatusCode::BAD_REQUEST,
                 Json(RespVO::<String> {
                     code: Some(10011),
                     msg: Some("link is expired".to_owned()),
@@ -378,7 +378,7 @@ pub async fn get_ticket_qrcode_by_secret_link(
 
     if !req_address.eq(&req.address) {
         return Err((
-            StatusCode::FORBIDDEN,
+            StatusCode::BAD_REQUEST,
             Json(RespVO::<String> {
                 code: Some(10012),
                 msg: Some("bad link".to_owned()),
@@ -652,8 +652,7 @@ pub async fn verify_sig(
         .map_err(new_internal_error)?
         .as_millis();
     // 正负5秒， 即时间窗口有10s
-    if now_ts.abs_diff(api_timestamp) > 10000000 {
-        // TODO: fixme
+    if now_ts.abs_diff(api_timestamp) > 5_000 {
         tracing::error!("====时间戳无效==========");
         return Err((
             StatusCode::BAD_REQUEST,
