@@ -76,6 +76,7 @@ pub async fn get_login_signmsg(
     JsonReq(req): JsonReq<GetLoginNonceReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    tracing::debug!("========获取签名消息===");
 
     let msg_domain = std::env::var("FANSLAND_WEBSITE_URL").unwrap();
     let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
@@ -160,13 +161,13 @@ pub async fn sign_in_with_ethereum(
     tracing::debug!("===========msg == {}", msg);
     if !msg.eq(&login_req.msg) {
         tracing::warn!("msg is not match");
-        // return new_api_error("invalid sig".to_string());
-
+        tracing::debug!("===========msg == {}", msg);
+        tracing::debug!("===========login_req.msg == {}", login_req.msg);
         return Err((
             StatusCode::BAD_REQUEST,
             Json(RespVO::<String> {
                 code: Some(10002),
-                msg: Some("signature msg is illegal".to_owned()),
+                msg: Some("invalid signature".to_owned()),
                 data: None,
             }),
         ));
@@ -174,11 +175,20 @@ pub async fn sign_in_with_ethereum(
     tracing::debug!("===========msg比对成功 ");
 
     // 验证签名
+    tracing::debug!("sig: {}", lrq.sig);
     let signature = Signature::from_str(&lrq.sig.clone()).map_err(new_internal_error)?;
     let address = Address::from_str(&lrq.address.clone()).map_err(new_internal_error)?;
-    signature
-        .verify(msg.clone(), address)
-        .map_err(new_internal_error)?;
+    signature.verify(msg.clone(), address).map_err(|e| {
+        tracing::error!("===验证签名错误:{}", e.to_string());
+        (
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10002),
+                msg: Some("invalid signature".to_owned()),
+                data: None,
+            }),
+        )
+    })?; // TODO:
 
     tracing::debug!("============验证签名成功");
 
@@ -377,6 +387,19 @@ pub async fn get_ticket_qrcode_by_secret_link(
         ));
     }
 
+    // 仅验证密码
+    if req.token_id == 0xFFFFFFFF_u32 {
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(RespVO::<String> {
+                code: Some(0),
+                msg: None,
+                data: None,
+            }),
+        )
+            .into_response());
+    }
+
     // 查询门票二维码
     query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id).await
 }
@@ -471,11 +494,11 @@ pub async fn verify_token(
 
     let hs = headers;
 
-    // let timestamp: String  = match hs.get("FanslandTimestamp") {
+    // let timestamp: String  = match hs.get("Fansland-Timestamp") {
     //     Some(t) => t.to_str().map_err(new_internal_error)?
     //     None => 0,
     // }
-    if !hs.contains_key("FanslandAuthToken") {
+    if !hs.contains_key("Fansland-Token") {
         tracing::error!("====缺少请求头  111==========");
         return Err((
             StatusCode::UNAUTHORIZED,
@@ -487,7 +510,7 @@ pub async fn verify_token(
         ));
     }
 
-    let value = match hs.get("FanslandAuthToken") {
+    let value = match hs.get("Fansland-Token") {
         Some(k) => k,
         None => {
             tracing::error!("====缺少请求头 222==========");
@@ -581,7 +604,7 @@ pub async fn verify_sig(
     // for (name, value) in hs.iter() {
     //     tracing::debug!("====== {}: {:?}", name, value);
     // }
-    if !hs.contains_key("FanslandTimestamp") || !hs.contains_key("FanslandNonce") {
+    if !hs.contains_key("Fansland-Timestamp") || !hs.contains_key("Fansland-Nonce") {
         tracing::error!("====缺少请求头  111==========");
         return Err((
             StatusCode::BAD_REQUEST,
@@ -595,7 +618,7 @@ pub async fn verify_sig(
 
     let mut api_timestamp = 0_u128;
     let mut api_nonce = 0_u64;
-    if let Some(ts) = hs.get("FanslandTimestamp") {
+    if let Some(ts) = hs.get("Fansland-Timestamp") {
         if let Ok(ts) = ts.to_str() {
             if let Ok(r) = ts.parse::<u128>() {
                 api_timestamp = r;
@@ -603,7 +626,7 @@ pub async fn verify_sig(
         }
     }
 
-    if let Some(nonce_value) = hs.get("FanslandNonce") {
+    if let Some(nonce_value) = hs.get("Fansland-Nonce") {
         if let Ok(nonce_str) = nonce_value.to_str() {
             if let Ok(nonce) = nonce_str.parse::<u64>() {
                 api_nonce = nonce;
@@ -663,6 +686,7 @@ pub async fn verify_sig(
 
 // 10000: 服务器内部错误
 // 10001: unauthorized 未鉴权
+// 10002: invalid signature 签名消息不合法
 // 10002: signature msg is illegal 签名消息不合法
 // 10003: signature msg is expired 签名消息过期
 // 10004: sig invalid 接口签名无效

@@ -10,7 +10,7 @@ function makeRequestSig(address) {
 
   console.log(msg);
   for (let nonce = 10000; nonce < 10000000; nonce++) {
-    sig_msg = msg + nonce;
+    let sig_msg = msg + nonce;
     const hash = blake3(sig_msg, { dkLen: 32 });
     if (hash[0] == 0) {
       console.log(hash.toString());
