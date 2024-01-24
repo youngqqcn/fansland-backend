@@ -23,7 +23,6 @@ use std::{
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
-use tracing::warn;
 
 use redis::{aio::Connection, Client};
 
@@ -701,12 +700,12 @@ where
     E: std::error::Error,
 {
     let msg = format!("server error: {}", err.to_string());
-    warn!("{}", msg.clone());
+    tracing::error!("ERROR: {}", msg.clone());
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(RespVO::<String> {
             code: Some(10000),
-            msg: Some(msg),
+            msg: Some("Sorry, please try again.".to_string()),
             data: None,
         }),
     )
