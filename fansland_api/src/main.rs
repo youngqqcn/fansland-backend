@@ -64,7 +64,7 @@ async fn main() {
         .with_state(app_state.clone());
 
     // run it with hyper
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3033));
     tracing::debug!("listening on {addr}");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app_routers).await.unwrap();
