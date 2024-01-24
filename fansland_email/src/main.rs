@@ -88,7 +88,7 @@ async fn send_message(
 
     client
         .send_email()
-        // .from_email_address(from)
+        .from_email_address(from)
         .destination(dest)
         .content(email_content)
         .send()
@@ -152,3 +152,6 @@ async fn main() -> Result<(), Error> {
 
     send_message(&client, &contact_list, &from_address, &subject, &message).await
 }
+
+
+
