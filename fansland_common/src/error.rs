@@ -64,11 +64,11 @@ impl From<&dyn std::error::Error> for Error {
     }
 }
 
-impl From<diesel::result::Error> for Error {
-    fn from(arg: diesel::result::Error) -> Self {
-        Error::E(arg.to_string())
-    }
-}
+// impl From<diesel::result::Error> for Error {
+//     fn from(arg: diesel::result::Error) -> Self {
+//         Error::E(arg.to_string())
+//     }
+// }
 
 impl From<Error> for std::io::Error {
     fn from(arg: Error) -> Self {
