@@ -1,15 +1,6 @@
 api:
 	cargo run --bin fansland_api
 
-diesel-setup:
-	diesel setup
-
-diesel-migration-run:
-	diesel migration run
-
-diesel-migration-redo:
-	diesel migration redo
-
-
-diesel-model:
-	cd fansland_api && diesel_ext
+start:
+	cargo run --bin fansland_api -r > api.log 2>&1 &
+	cargo run --bin fansland_nft_ticket -r > nft_ticket.log 2>&1 &

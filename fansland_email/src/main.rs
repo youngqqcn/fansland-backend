@@ -82,9 +82,6 @@ async fn send_message(
         .build();
 
     let email_content = EmailContent::builder().simple(msg).build();
-    // client.put_email_identity_dkim_attributes();
-    // client.put_email_identity_dkim_signing_attributes();
-    // client
 
     client
         .send_email()
@@ -152,6 +149,3 @@ async fn main() -> Result<(), Error> {
 
     send_message(&client, &contact_list, &from_address, &subject, &message).await
 }
-
-
-
