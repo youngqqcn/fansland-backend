@@ -39,7 +39,13 @@ async fn send_message(
     let body = Body::builder().html(body_content).build();
     //=====================
 
-    let qrcode_bz = get_qrcode_png_base64("1:xxxxxxxxxxxxxxhhhhh");
+    // let qrcode_bz = get_qrcode_png("1:xxxxxxxxxxxxxxhhhhh");
+    let qrcode_bz_str = get_qrcode_png_base64("1:xxxxxxxxxxxxxxhhhhh");
+    // let qrcode_bz_str = String::from_utf8_lossy(&qrcode_bz);
+    //     Ok(s) => s,
+    //     Err(e) => panic!("Failed to convert bytes to string: {}", e),
+    // };
+
     let m = MultiPart::mixed().multipart(
         MultiPart::related()
             .singlepart(
@@ -54,6 +60,7 @@ async fn send_message(
                 SinglePart::builder()
                     .header(header::ContentType("image/png".parse().unwrap()))
                     .header(header::ContentLocation("<imagepng>".into()))
+                    // .header(header::ContentTransferEncoding::)
                     .header(header::ContentDisposition {
                         disposition: header::DispositionType::Attachment,
                         parameters: vec![header::DispositionParam::Filename(
@@ -62,7 +69,7 @@ async fn send_message(
                             "image.png".into(),
                         )],
                     })
-                    .body(&qrcode_bz),
+                    .body(&qrcode_bz_str),
             ),
     );
 
