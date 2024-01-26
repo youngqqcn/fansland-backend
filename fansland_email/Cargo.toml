@@ -11,12 +11,15 @@ aws-sdk-ses = "1.11.0"
 aws-sdk-sesv2 = { version = "1.11.0", features = ["behavior-version-latest"] }
 tokio = { version = "1", features = ["full"] }
 dotenv = "0.15.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+hex = { version = "0.4.3", features = ["serde"] }
+redis = { version = "0.24.0", features = ["tokio-comp"] }
+redis_pool = "0.3"
+eyre = "0.6.11"
+ctrlc = "3.4.2"
 
 
 [dependencies.clap]
 version = "~4.4"
 features = ["derive"]
-
-[dependencies.tracing-subscriber]
-version = "0.3.15"
-features = ["env-filter"]

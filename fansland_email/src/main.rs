@@ -3,69 +3,25 @@
 
 #![allow(clippy::result_large_err)]
 
-use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_sesv2::types::{Body, Content, Destination, EmailContent, Message};
-use aws_sdk_sesv2::{config::Region, meta::PKG_VERSION, Client, Error};
-use clap::Parser;
+use aws_sdk_sesv2::{config::Region, Client, Error};
 use dotenv::dotenv;
-
-#[derive(Debug, Parser)]
-struct Opt {
-    /// The contact list containing email addresses to send the message to.
-    #[structopt(short, long)]
-    contact_list: String,
-
-    /// The AWS Region.
-    #[structopt(short, long)]
-    region: Option<String>,
-
-    /// The email address of the sender.
-    #[structopt(short, long)]
-    from_address: String,
-
-    /// The message of the email.
-    #[structopt(short, long)]
-    message: String,
-
-    /// The subject of the email.
-    #[structopt(short, long)]
-    subject: String,
-
-    /// Whether to display additional information.
-    #[structopt(short, long)]
-    verbose: bool,
-}
+use tracing::{debug, Level};
 
 // Sends a message to all members of the contact list.
 // snippet-start:[ses.rust.send-email]
 async fn send_message(
     client: &Client,
-    list: &str,
-    from: &str,
-    subject: &str,
+    contact_list: Vec<String>,
+    from_address: &str,
     message: &str,
 ) -> Result<(), Error> {
-    // Get list of email addresses from contact list.
-    // let resp = client
-    //     .list_contacts()
-    //     .contact_list_name(list)
-    //     .send()
-    //     .await?;
-
     println!("====================");
 
-    // let contacts = resp.contacts();
-
-    // let cs: Vec<String> = contacts
-    //     .iter()
-    //     .map(|i| i.email_address().unwrap_or_default().to_string())
-    //     .collect();
-    let cs = vec![list.to_string()];
-
     let mut dest: Destination = Destination::builder().build();
-    dest.to_addresses = Some(cs);
+    dest.to_addresses = Some(contact_list);
     let subject_content = Content::builder()
-        .data(subject)
+        .data("fansland")
         .charset("UTF-8")
         .build()
         .expect("building Content");
@@ -82,10 +38,11 @@ async fn send_message(
         .build();
 
     let email_content = EmailContent::builder().simple(msg).build();
+    // let email_content = EmailContent::builder().get_template()
 
     client
         .send_email()
-        .from_email_address(from)
+        .from_email_address(from_address)
         .destination(dest)
         .content(email_content)
         .send()
@@ -95,57 +52,49 @@ async fn send_message(
 
     Ok(())
 }
-// snippet-end:[ses.rust.send-email]
 
 // https://github.com/awslabs/aws-sdk-rust/blob/main/examples/examples/ses/src/bin/send-email.rs
-
-/// Sends a message to the email addresses in the contact list in the Region.
-/// # Arguments
-///
-/// * `-f FROM-ADDRESS` - The email address of the sender.
-/// * `-m MESSAGE` - The email message that is sent.
-/// * `-s SUBJECT` - The subject of the email message.
-/// * `-c CONTACT-LIST` - The contact list with the email addresses of the recepients.
-/// * `[-r REGION]` - The Region in which the client is created.
-///    If not supplied, uses the value of the **AWS_REGION** environment variable.
-///    If the environment variable is not set, defaults to **us-west-2**.
-/// * `[-v]` - Whether to display additional information.
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     dotenv().ok();
+    tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
 
-    tracing_subscriber::fmt::init();
+    let message = "hello world";
+    let receipent_emails = vec!["youngqqcn@gmail.com".to_string()];
 
-    let Opt {
-        contact_list,
-        region,
-        from_address,
-        message,
-        subject,
-        verbose,
-    } = Opt::parse();
+    let rds_url = std::env::var("REDIS_URL").unwrap();
+    tracing::debug!("rds_url: {}", rds_url);
+    let rds_client = redis::Client::open(rds_url).unwrap();
+    let redis_pool = redis_pool::RedisPool::from(rds_client);
+    let mut rds_conn = redis_pool.aquire().await.unwrap();
 
-    let region_provider = RegionProviderChain::first_try(region.map(Region::new))
-        .or_default_provider()
-        .or_else(Region::new("us-west-2"));
+    // 获取当前数据库中的扫描起始高度
+    let send_to_email: String = match redis::cmd("LPOP")
+        .arg("sendemail")
+        .query_async::<_, Option<String>>(&mut rds_conn)
+        .await
+        .unwrap_or_default()
+    {
+        Some(m) => m,
+        None => String::new(),
+    };
 
-    println!();
+    debug!("email: {send_to_email}");
 
-    if verbose {
-        println!("SES client version: {}", PKG_VERSION);
-        println!(
-            "Region:             {}",
-            region_provider.region().await.unwrap().as_ref()
-        );
-        println!("From address:       {}", &from_address);
-        println!("Contact list:       {}", &contact_list);
-        println!("Subject:            {}", &subject);
-        println!("Message:            {}", &message);
-        println!();
+    if send_to_email != String::new() {
+        // 使用redis的 list 实现队列的FIFO:
+        //   生产者：在fansland_nft_ticket中使用 rpush key value 在队列尾部(右边)插入值
+        //   消费者： fansland_email使用 lpop key 从队列头部（左边）取值
+
+        // 发送邮件
+        let from_address = "Fansland <no-reply@fansland.io>";
+        let region = "ap-northeast-1";
+        let shared_config = aws_config::from_env()
+            .region(Region::new(region))
+            .load()
+            .await;
+        let client = Client::new(&shared_config);
+        send_message(&client, receipent_emails, from_address, &message).await?
     }
-
-    let shared_config = aws_config::from_env().region(region_provider).load().await;
-    let client = Client::new(&shared_config);
-
-    send_message(&client, &contact_list, &from_address, &subject, &message).await
+    Ok(())
 }
