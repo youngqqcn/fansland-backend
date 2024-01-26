@@ -18,7 +18,12 @@ redis = { version = "0.24.0", features = ["tokio-comp"] }
 redis_pool = "0.3"
 eyre = "0.6.11"
 ctrlc = "3.4.2"
-
+# lazy_static = { version = "1.4.0", features = ["spin", "spin_no_std"] }
+# regex = "1.10.3"
+email_address = "0.2.4"
+qrcode = { version = "0.13", default-features = true }
+image = "0.24.8"
+base64 = "0.21.7"
 
 [dependencies.clap]
 version = "~4.4"

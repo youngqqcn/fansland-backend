@@ -1,4 +1,4 @@
-pub fn get_zzzztemplate(address: &str) -> String {
+pub fn get_email_template(address: &str, qrcode_b64: &str) -> String {
     format!(
         r#"<div style=width:100%; background-color:#E4E5E7;padding:2px;>
         <div style=max-width:640px; margin:0 auto; background:#ffffff;border-radius:10px; overflow:hidden;>
@@ -18,6 +18,7 @@ pub fn get_zzzztemplate(address: &str) -> String {
                 <p style=margin:0;><br></p>
                 <hr>
                 <p style=font-size:14px; font-style: italic;  text-align:center;><em> Fansland aims to build the best Web3 infrastructure for global fans.<em> </p>
+                <img src="data:image/png;base64,{qrcode_b64}" alt="qrcode" />
             </div>
         </div>
     </div>

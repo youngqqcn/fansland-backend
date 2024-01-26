@@ -5,6 +5,7 @@ use axum::{
     response::{IntoResponse, Json, Response},
 };
 use chrono::Utc;
+use email_address::EmailAddress;
 use fansland_common::{jwt::JWTToken, RespVO};
 
 use crate::{
@@ -40,6 +41,19 @@ pub async fn bind_email(
     JsonReq(req): JsonReq<BindEmailReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let _ = verify_token(headers, &app_state, req.address.clone()).await?;
+
+    // 验证邮箱地址是否合法
+    if !EmailAddress::is_valid(&req.email) {
+        tracing::warn!("邮箱地址非法:{}", req.email);
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(10013),
+                msg: Some("invalid email".to_owned()),
+                data: None,
+            }),
+        ));
+    }
 
     // 使用redis
     let mut rds_conn = app_state
@@ -692,6 +706,7 @@ pub async fn verify_sig(
 // 10009: illegal request 非法请求
 // 10011: link is expired 私密链接过期
 // 10012: bad link 私密链接请求非法
+// 10013: invalid email 邮箱地址非法
 // 11001: nft ticket is pending, please wait few minutes 门票二维码还在生成中，请稍等几分钟
 // 10099: token expired token过期
 
