@@ -8,6 +8,10 @@ use aws_sdk_sesv2::{config::Region, Client, Error};
 use dotenv::dotenv;
 use tracing::{debug, Level};
 
+mod template;
+use crate::template::get_zzzztemplate;
+
+
 // Sends a message to all members of the contact list.
 // snippet-start:[ses.rust.send-email]
 async fn send_message(
@@ -30,7 +34,7 @@ async fn send_message(
         .charset("UTF-8")
         .build()
         .expect("building Content");
-    let body = Body::builder().text(body_content).build();
+    let body = Body::builder().html(body_content).build();
 
     let msg = Message::builder()
         .subject(subject_content)
@@ -59,7 +63,10 @@ async fn main() -> Result<(), Error> {
     dotenv().ok();
     tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
 
-    let message = "hello world";
+    // let message = "hello world";
+    let message  = get_zzzztemplate("0x51Bdbad59a24207b32237e5c47E866A32a8D5Ed8");
+
+
     let receipent_emails = vec!["youngqqcn@gmail.com".to_string()];
 
     let rds_url = std::env::var("REDIS_URL").unwrap();
