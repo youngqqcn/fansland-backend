@@ -1,15 +1,17 @@
 #![allow(clippy::result_large_err)]
 
-use aws_sdk_sesv2::types::{Body, Content, Destination, EmailContent, Message};
+use aws_sdk_ses::primitives::Blob;
+use aws_sdk_sesv2::types::{Body, Content, Destination, EmailContent, Message, RawMessage};
 use aws_sdk_sesv2::{config::Region, Client, Error};
 use dotenv::dotenv;
 use email_address::EmailAddress;
 use tracing::{info, warn, Level};
-
 mod qrcode2b64;
 mod template;
+use emailmessage::{header, MultiPart, SinglePart};
+// use hyperx::header::{Headers, ContentLocation};
 
-use crate::qrcode2b64::get_qrcode_png_base64;
+use crate::qrcode2b64::{get_qrcode_png, get_qrcode_png_base64};
 use crate::template::get_email_template;
 
 // Sends a message to all members of the contact list.
@@ -35,17 +37,53 @@ async fn send_message(
         .build()
         .expect("building Content");
     let body = Body::builder().html(body_content).build();
+    //=====================
 
+    let qrcode_bz = get_qrcode_png_base64("1:xxxxxxxxxxxxxxhhhhh");
+    let m = MultiPart::mixed().multipart(
+        MultiPart::related()
+            .singlepart(
+                SinglePart::eight_bit()
+                    .header(header::ContentTransferEncoding::Base64)
+                    .header(header::ContentType(
+                        "text/html; charset=utf8".parse().unwrap(),
+                    ))
+                    .body("<p><b>Hello</b>, <i>world</i>! <img src=\"cid:imagepng\"></p>"),
+            )
+            .singlepart(
+                SinglePart::builder()
+                    .header(header::ContentType("image/png".parse().unwrap()))
+                    .header(header::ContentLocation("<imagepng>".into()))
+                    .header(header::ContentDisposition {
+                        disposition: header::DispositionType::Attachment,
+                        parameters: vec![header::DispositionParam::Filename(
+                            header::Charset::Ext("utf-8".into()),
+                            None,
+                            "image.png".into(),
+                        )],
+                    })
+                    .body(&qrcode_bz),
+            ),
+    );
 
+    println!("{}", m);
     // 附件
+    // let qrcode_b64 = get_qrcode_png_base64("1:xxxxxxxxxxxxxxhhhhh");
+    // let qrcode_bz = get_qrcode_png("1:xxxxxxxxxxxxxxhhhhh");
+    let data = RawMessage::builder()
+        .data(Blob::new(m.to_string()))
+        .build()
+        .expect("build raw data");
 
+    //=====================
 
     let msg = Message::builder()
         .subject(subject_content)
         .body(body)
         .build();
 
-    let email_content = EmailContent::builder().simple(msg).build();
+    // let email_content = EmailContent::builder().simple(msg).raw(data).build();
+    let email_content = EmailContent::builder().raw(data).build();
 
     client
         .send_email()
@@ -67,6 +105,35 @@ async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     // let message = "hello world";
+
+    //=============
+    // let qrcode_bz = get_qrcode_png_base64("1:xxxxxxxxxxxxxxhhhhh");
+    // let m = MultiPart::mixed().multipart(
+    //     MultiPart::related()
+    //         .singlepart(
+    //             SinglePart::eight_bit()
+    //                 .header(header::ContentType(
+    //                     "text/html; charset=utf8".parse().unwrap(),
+    //                 ))
+    //                 .body("<p><b>Hello</b>, <i>world</i>! <img src=image.png></p>"),
+    //         )
+    //         .singlepart(
+    //             // SinglePart::base64()
+    //             SinglePart::builder()
+    //                 .header(header::ContentType("image/png".parse().unwrap()))
+    //                 .header(header::ContentLocation("/image.png".into()))
+    //                 // .header(header::ContentTransferEncoding::EightBit)
+    //                 .header(header::ContentDisposition {
+    //                     disposition: header::DispositionType::Attachment,
+    //                     parameters: vec![],
+    //                 })
+    //                 .body(&qrcode_bz),
+    //         ),
+    // );
+
+    // println!("{}", m);
+
+    //====================
 
     let rds_url = std::env::var("REDIS_URL").unwrap();
     tracing::debug!("rds_url: {}", rds_url);
