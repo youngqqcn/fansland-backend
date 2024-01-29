@@ -1,3 +1,4 @@
+use clap::Parser;
 use ctrlc;
 use dotenv::dotenv;
 use ethers::{
@@ -15,9 +16,19 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::Level;
 
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// chainid , [80001: polygon-mumbai testnet] , [97: polygon-pos mainnet], [137: bsc-testnet], [56: bsc-mainnet]
+    #[arg(short, long)]
+    chainid: u64,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
+    let args = Args::parse();
 
     // tracing_subscriber::registry()
     //     .with(
@@ -27,6 +38,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     .with(tracing_subscriber::fmt::layer())
     //     .init();
     // test().await?;
+
+    let chainid: u64 = args.chainid;
+    let rpc_url = std::env::var(format!("RPC_URL_{chainid}")).unwrap();
+    let contract_address = std::env::var(format!("FANSLAND_NFT_{chainid}")).unwrap();
 
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
@@ -44,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Running...");
     while r.load(Ordering::SeqCst) {
         // 执行你的操作
-        let _ = update_token_id_owner().await;
+        let _ = update_token_id_owner(&rpc_url, &contract_address, chainid).await;
         // 睡眠一段时间，然后继续下一次循环
         for _ in 0..10 {
             sleep(Duration::from_secs(1)).await;
@@ -60,16 +75,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // 更新token的owner
-async fn update_token_id_owner() -> Result<(), Box<dyn std::error::Error>> {
-    let rpc_url = std::env::var("RPC_URL").unwrap();
+async fn update_token_id_owner(
+    rpc_url: &String,
+    contract_address: &String,
+    chainid: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
     let provider = Provider::<Http>::try_from(rpc_url)?;
-
     abigen!(SimpleContract, "FanslandNFT.abi",);
 
-    let fansland_nft_contract_address = std::env::var("FANSLAND_NFT").unwrap();
+    let fansland_nft_contract_address = contract_address;
     let client = Arc::new(provider);
-    // let contract_address: Address = CONTRACT_ADDRESS.parse()?;
-    // let contract = SimpleContract::new(contract_address, client.clone());
 
     let rds_url = std::env::var("REDIS_URL").unwrap();
     tracing::debug!("rds_url: {}", rds_url);
@@ -77,9 +92,11 @@ async fn update_token_id_owner() -> Result<(), Box<dyn std::error::Error>> {
     let redis_pool = RedisPool::from(rds_client);
     let mut rds_conn = redis_pool.aquire().await?;
 
+    let key_prefix = "nft:".to_owned() + &chainid.to_string() + ":";
+
     // 获取当前数据库中的扫描起始高度
     let scan_from_block: u64 = match redis::cmd("GET")
-        .arg("nft:scan:cur_block")
+        .arg(key_prefix.clone() + "cur_scan_block")
         .query_async::<_, Option<String>>(&mut rds_conn)
         .await?
     {
@@ -99,7 +116,7 @@ async fn update_token_id_owner() -> Result<(), Box<dyn std::error::Error>> {
     // if scan_to_block - scan_from_block > 100 {
     //     scan_to_block = scan_from_block + 100;
     // }
-    tracing::info!("扫描区块范围:{scan_from_block} - {scan_to_block}");
+    tracing::info!("ChainID-{chainid}扫描区块范围:{scan_from_block} - {scan_to_block}");
 
     // 合约的转移事件： event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     let filter = Filter::new()
@@ -123,11 +140,13 @@ async fn update_token_id_owner() -> Result<(), Box<dyn std::error::Error>> {
         );
 
         // 插入数据库
-        let prefix_key = format!("nft:tokenid:owner:{token_id}");
         let _ = redis::pipe()
-            .set(prefix_key, &to_addr_hex)
-            .sadd("nft:tokenids", token_id.as_u64())
-            .sadd("nft:holders", &to_addr_hex)
+            .set(
+                key_prefix.clone() + &format!("nft:tokenid:owner:{token_id}"),
+                &to_addr_hex,
+            )
+            .sadd(key_prefix.clone() + "tokenids", token_id.as_u64())
+            .sadd(key_prefix.clone() + "holders", &to_addr_hex)
             .ignore()
             .query_async(&mut rds_conn)
             .await?;
@@ -135,29 +154,11 @@ async fn update_token_id_owner() -> Result<(), Box<dyn std::error::Error>> {
 
     // 更新数据库中扫描高度
     let _ = redis::pipe()
-        .set("nft:scan:cur_block", scan_to_block)
+        .set(key_prefix.clone() + "nft:cur_scan_block", scan_to_block)
         .ignore()
         .query_async(&mut rds_conn)
         .await?;
 
-    tracing::info!("更新扫描高度为{scan_to_block}成功");
+    tracing::info!("ChainID-{chainid}更新扫描高度为{scan_to_block}成功!");
     Ok(())
 }
-
-// 更新token的owner
-// #[warn(dead_code)]
-// async fn test() -> Result<(), Box<dyn std::error::Error>> {
-//     let rpc_url = std::env::var("RPC_URL").unwrap();
-//     let provider = Provider::<Http>::try_from(rpc_url)?;
-
-//     abigen!(SimpleContract, "FanslandNFT.abi",);
-
-//     let fansland_nft_contract_address = std::env::var("FANSLAND_NFT").unwrap();
-//     let client = Arc::new(provider);
-//     let contract_address: Address = fansland_nft_contract_address.parse()?;
-//     let contract = SimpleContract::new(contract_address, client.clone());
-
-//     println!("type of 0 : {}", contract.token_id_type_map(0.into()).await?);
-
-//     Ok(())
-// }

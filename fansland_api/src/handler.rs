@@ -11,7 +11,7 @@ use fansland_common::{jwt::JWTToken, RespVO};
 use crate::{
     api::{
         BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
-        GetTicketQrCodeBySecretToken, LoginByAddressReq, LoginByAddressResp, QueryAddressReq,
+        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, QueryAddressReq,
         QueryAddressResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, UpdateSecretLinkPasswdReq,
         UpdateSecretLinkPasswdResp,
     },
@@ -292,20 +292,22 @@ pub async fn query_ticket_qrcode_by_address(
 
     tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
 
-    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id).await
+    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id, req.chainid).await
 }
 
 pub async fn query_ticket_qrcode_by_token_id(
     mut rds_conn: RedisPoolConnection<Connection>,
     address: String,
     token_id: u32,
+    chainid: u64,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
+    tracing::debug!("=从redis获取绑定tokenid对应的二维码, chainid:{chainid}, adddress:{address}, token_id:{token_id} ",);
 
     // 从redis中获取该token_id的owner
-    let prefix_key = "nft:tokenid:owner:".to_string() + &token_id.to_string();
+    let key_prefix =
+        "nft:".to_owned() + &chainid.to_string() + ":nft:tokenid:owner:" + &token_id.to_string();
     let token_id_owner = match redis::cmd("GET")
-        .arg(&prefix_key)
+        .arg(&key_prefix)
         .query_async::<_, Option<String>>(&mut rds_conn)
         .await
         .map_err(new_internal_error)?
@@ -327,12 +329,13 @@ pub async fn query_ticket_qrcode_by_token_id(
     }
 
     // 根据算法生成二维码
-    let fansland_nft_contract_address = std::env::var("FANSLAND_NFT").unwrap();
+    let fansland_nft_contract_address = std::env::var(format!("FANSLAND_NFT_{}", chainid)).unwrap();
     let salt = "QrCode@fansland.io2024-888"; // TODO:
     let hash_msg = String::new()
         + &fansland_nft_contract_address
         + &token_id.to_string()
         + &token_id_owner
+        + &chainid.to_string()
         + salt;
     let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
     let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
@@ -342,8 +345,8 @@ pub async fn query_ticket_qrcode_by_token_id(
         user_address: address,
         nft_token_id: token_id,
         qrcode: qrcode,
-        // redeem_status: 0,
-        // type_id: 0,
+        contract_address: fansland_nft_contract_address,
+        chain_id: 0,
     };
 
     Ok(RespVO::from(&r).resp_json())
@@ -353,7 +356,7 @@ pub async fn query_ticket_qrcode_by_token_id(
 pub async fn get_ticket_qrcode_by_secret_link(
     headers: HeaderMap,
     State(app_state): State<AppState>,
-    JsonReq(secret_token_req): JsonReq<GetTicketQrCodeBySecretToken>,
+    JsonReq(secret_token_req): JsonReq<GetTicketQrCodeBySecretTokenReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     let _ = verify_sig(headers.clone(), secret_token_req.address.clone()).await?;
 
@@ -414,7 +417,7 @@ pub async fn get_ticket_qrcode_by_secret_link(
     }
 
     // 查询门票二维码
-    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id).await
+    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id, req.chainid).await
 }
 
 // 更新密码

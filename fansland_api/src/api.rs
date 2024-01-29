@@ -51,8 +51,6 @@ pub struct GetLoginNonceResp {
     pub signmsg: String,
 }
 
-
-
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct UpdateSecretLinkPasswdReq {
     pub address: String, // 地址
@@ -67,24 +65,26 @@ pub struct UpdateSecretLinkPasswdResp {
 
 // get tickets by secret token
 #[derive(Deserialize, Clone, Debug, Serialize)]
-pub struct GetTicketQrCodeBySecretToken {
+pub struct GetTicketQrCodeBySecretTokenReq {
     pub address: String, // 地址
-    pub token: String,  // token
-    pub passwd: String, // 密码hash
-    pub token_id: u32, // token
+    pub token: String,   // token
+    pub passwd: String,  // 密码hash
+    pub token_id: u32,   // token
+    pub chainid: u64,    // chainid
 }
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct QueryTicketQrCodeReq {
     pub address: String,
     pub token_id: u32, // token_id
+    pub chainid: u64,  // chainid
 }
 
 #[derive(Default, Deserialize, Clone, Debug, Serialize)]
 pub struct QueryTicketQrCodeResp {
     pub user_address: String,
-    // pub chain_name: String,
-    // pub contract_address: String,
+    pub chain_id: u64,
+    pub contract_address: String,
     pub nft_token_id: u32,
     pub qrcode: String,
     // pub redeem_status: u32,
