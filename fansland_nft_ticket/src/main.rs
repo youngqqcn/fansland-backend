@@ -95,7 +95,7 @@ async fn update_token_id_owner(
     let key_prefix = "nft:".to_owned() + &chainid.to_string() + ":";
 
     // 获取当前数据库中的扫描起始高度
-    let scan_from_block: u64 = match redis::cmd("GET")
+    let mut scan_from_block: u64 = match redis::cmd("GET")
         .arg(key_prefix.clone() + "cur_scan_block")
         .query_async::<_, Option<String>>(&mut rds_conn)
         .await?
@@ -116,6 +116,9 @@ async fn update_token_id_owner(
     // if scan_to_block - scan_from_block > 100 {
     //     scan_to_block = scan_from_block + 100;
     // }
+    if scan_from_block == 0 {
+        scan_from_block = scan_to_block - 100;
+    }
     tracing::info!("ChainID-{chainid}扫描区块范围:{scan_from_block} - {scan_to_block}");
 
     // 合约的转移事件： event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
@@ -154,7 +157,7 @@ async fn update_token_id_owner(
 
     // 更新数据库中扫描高度
     let _ = redis::pipe()
-        .set(key_prefix.clone() + "nft:cur_scan_block", scan_to_block)
+        .set(key_prefix.clone() + "cur_scan_block", scan_to_block)
         .ignore()
         .query_async(&mut rds_conn)
         .await?;
