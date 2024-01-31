@@ -17,3 +17,5 @@ data
 fansland_email/qrcode.png
 
 *.pyc
+
+*.png
