@@ -6,9 +6,9 @@ from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from email.mime.application import MIMEApplication
 import os
-from template import get_mint_template
+from fansland_email_py.lib.template import get_mint_template
 
-from gen_qrcode import gen_qrcode_png_bytes
+from fansland_email_py.lib.gen_qrcode import gen_qrcode_png_bytes
 
 # Replace sender@example.com with your "From" address.
 # This address must be verified with Amazon SES.
@@ -35,17 +35,7 @@ ATTACHMENT = "./qrcode.png"
 # The email body for recipients with non-HTML email clients.
 # BODY_TEXT = "Hello,\r\nPlease see the attached file for a list of customers to contact."
 
-# The HTML body of the email.
-# BODY_HTML = """\
-# <html>
-# <head></head>
-# <body>
-# <h1>Hello!</h1>
-# <p>Please see the attached file for a list of customers to contact.</p>
-# <img src="cid:qrcode">
-# </body>
-# </html>
-# """
+
 
 # The character encoding for the email.
 CHARSET = "utf-8"
