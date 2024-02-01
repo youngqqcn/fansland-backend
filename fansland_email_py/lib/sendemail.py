@@ -60,9 +60,9 @@ class SendEmail:
         msg_body = MIMEMultipart('alternative')
 
         html_content = get_mint_template(send_msg.chain, send_msg.chainid, send_msg.address, ticket_type=send_msg.ticket_type).encode("utf-8")
-        print('========html_content===========')
-        print(html_content)
-        print('===================')
+        # print('========html_content===========')
+        # print(html_content)
+        # print('===================')
         htmlpart = MIMEText(html_content, 'html', CHARSET)
 
         # Add the text and HTML parts to the child container.
