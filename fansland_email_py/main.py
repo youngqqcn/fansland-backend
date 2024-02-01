@@ -21,7 +21,7 @@ def main():
         '80001': 'Polygon Mumbai Testnet',
         '97': 'BSC Testnet',
         '11155111': 'Ethereum Sepolia Testnet',
-        '431614': 'Arbitrum Sepolia Testnet',
+        '421614': 'Arbitrum Sepolia Testnet',
         '11155420': 'Op Sepolia Testnet',
         '43113': 'Avalanche Fuji Testnet'
     }
@@ -40,7 +40,6 @@ def main():
     while True:
         print('=================start send email ===============')
         try:
-
             raw_msg = r.lpop('sendemail')
             if raw_msg is  None:
                 print('empty email queue')
@@ -83,12 +82,12 @@ def main():
 
                 print("Email sent! Message ID:"),
                 print(response['MessageId'])
-
-            time.sleep(2)
         except ClientError as e:
             print(e.response['Error']['Message'])
+        except Exception as e:
             print("errror=========\n{}".format(e))
-            time.sleep(2)
+
+        time.sleep(5)
 
     pass
 
