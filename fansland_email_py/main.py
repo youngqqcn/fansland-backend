@@ -38,7 +38,9 @@ def main():
 
 
     while True:
+        print('=================start send email ===============')
         try:
+
             raw_msg = r.lpop('sendemail')
             if raw_msg is  None:
                 print('empty email queue')
@@ -86,6 +88,7 @@ def main():
         except ClientError as e:
             print(e.response['Error']['Message'])
             print("errror=========\n{}".format(e))
+            time.sleep(2)
 
     pass
 
