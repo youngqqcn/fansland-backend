@@ -11,11 +11,12 @@ from .gen_qrcode import gen_qrcode_png_bytes
 
 
 class SendEmailMsg(object):
-    def __init__(self, to_email, qrcodes, address, chain):
+    def __init__(self, to_email, qrcodes, address, chain, ticket_type):
         self.qrcodes=qrcodes
         self.email = to_email
         self.address = address
         self.chain= chain
+        self.ticket_type = ticket_type
         pass
 
     def __repr__(self) :
@@ -90,22 +91,15 @@ class SendEmail:
         # Add the attachment to the parent container.
         # msg.attach(att)
         #print(msg)
-        try:
-            #Provide the contents of the email.
-            response = self.client.send_raw_email(
-                Source=SENDER,
-                Destinations=[
+        #Provide the contents of the email.
+        response = self.client.send_raw_email(
+            Source=SENDER,
+            Destinations=[
 
-                ],
-                RawMessage={
-                    'Data':msg.as_string(),
-                },
-                # ConfigurationSetName=CONFIGURATION_SET
-            )
-            return response
-        # Display an error if something goes wrong.
-        except ClientError as e:
-            print(e.response['Error']['Message'])
-        else:
-            print("Email sent! Message ID:"),
-            print(response['MessageId'])
+            ],
+            RawMessage={
+                'Data':msg.as_string(),
+            },
+            # ConfigurationSetName=CONFIGURATION_SET
+        )
+        return response

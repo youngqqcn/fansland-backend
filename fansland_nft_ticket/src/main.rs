@@ -81,10 +81,13 @@ async fn update_token_id_owner(
     chainid: u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let provider = Provider::<Http>::try_from(rpc_url)?;
-    abigen!(SimpleContract, "FanslandNFT.abi",);
+    abigen!(FanslandNFTContract, "FanslandNFT.abi",);
+
+    let client = Arc::new(provider);
 
     let fansland_nft_contract_address = contract_address;
-    let client = Arc::new(provider);
+    let contract_address_h160: Address = contract_address.parse()?;
+    let contract = FanslandNFTContract::new(contract_address_h160, client.clone());
 
     let rds_url = std::env::var("REDIS_URL").unwrap();
     tracing::debug!("rds_url: {}", rds_url);
@@ -142,14 +145,35 @@ async fn update_token_id_owner(
             "from_addr = {from_addr_hex}, to_addr = {to_addr_hex}, token_id= {token_id}"
         );
 
+        // 获取nft票的类型
+        let type_id: u64 = contract.token_id_type_map(token_id).call().await?.as_u64();
+
+        let qrcode_txt = gen_qrcode_text(chainid, token_id.as_u64(), to_addr_hex.to_lowercase());
+        tracing::info!("token_id qrcode: {}", qrcode_txt);
+
         // 插入数据库
         let _ = redis::pipe()
             .set(
                 key_prefix.clone() + &format!("nft:tokenid:owner:{token_id}"),
                 &to_addr_hex,
             )
+            .set(
+                key_prefix.clone() + &format!("nft:tokenid:type:{token_id}"),
+                type_id,
+            )
             .sadd(key_prefix.clone() + "tokenids", token_id.as_u64())
             .sadd(key_prefix.clone() + "holders", &to_addr_hex)
+            .rpush(
+                "sendemail",
+                &format!(
+                    "{};{};{};{};{}",
+                    chainid,
+                    to_addr_hex.clone().to_owned(),
+                    token_id,
+                    type_id,
+                    qrcode_txt
+                ),
+            )
             .ignore()
             .query_async(&mut rds_conn)
             .await?;
@@ -164,4 +188,21 @@ async fn update_token_id_owner(
 
     tracing::info!("ChainID-{chainid}更新扫描高度为{scan_to_block}成功!");
     Ok(())
+}
+
+fn gen_qrcode_text(chainid: u64, token_id: u64, token_id_owner: String) -> String {
+    // 根据算法生成二维码
+    let fansland_nft_contract_address = std::env::var(format!("FANSLAND_NFT_{}", chainid)).unwrap();
+    let salt = "QrCode@fansland.io2024-888"; // TODO:
+    let hash_msg = String::new()
+        + &fansland_nft_contract_address
+        + &token_id.to_string()
+        + &token_id_owner
+        + &chainid.to_string()
+        + salt;
+    let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
+    let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
+    let qrcode = String::from("1:") + &hex::encode(bz_qrcode);
+
+    return qrcode;
 }
