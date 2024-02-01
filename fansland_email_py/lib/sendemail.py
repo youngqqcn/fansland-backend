@@ -11,11 +11,12 @@ from .gen_qrcode import gen_qrcode_png_bytes
 
 
 class SendEmailMsg(object):
-    def __init__(self, to_email, qrcodes, address, chain, ticket_type):
+    def __init__(self, to_email, qrcodes, address, chain, chainid, ticket_type):
         self.qrcodes=qrcodes
         self.email = to_email
         self.address = address
         self.chain= chain
+        self.chainid = chainid
         self.ticket_type = ticket_type
         pass
 
@@ -58,7 +59,7 @@ class SendEmail:
         # msg_body = MIMEMultipart('alternative')
         msg_body = MIMEMultipart('alternative')
 
-        html_content = get_mint_template(send_msg.address, ticket_type=send_msg.ticket_type).encode("utf-8")
+        html_content = get_mint_template(send_msg.chain, send_msg.chainid, send_msg.address, ticket_type=send_msg.ticket_type).encode("utf-8")
         print('========html_content===========')
         print(html_content)
         print('===================')

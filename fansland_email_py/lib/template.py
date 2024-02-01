@@ -34,7 +34,7 @@
 #     return first_part + img_part + last_part
 
 
-def get_mint_template(address, ticket_type) :
+def get_mint_template(chain, chainid, address, ticket_type) :
     location = "Thailand Bangkok"
     ticketType = ticket_type
     date = "3-6 May 2024"
@@ -45,8 +45,11 @@ def get_mint_template(address, ticket_type) :
             <h1 style="font-size:18px; font-weight:bold; text-align:center; color:#081131;"> Fansland NFT ticket Mint success! 🎉 </h1>
             <p style="margin:0;"><br></p>
             <p style="font-size:14px; line-height:170%; letter-spacing:0.2px;  margin:0;"> Congratulations! 👏</p>
-            <p style="font-size:14px; line-height:170%; letter-spacing:0.2px; margin:0;"> You have successfully mint Fansland NFT ticket with your wallet address: </p>
+            <p style="margin:0;"><br></p>
+            <p style="font-size:14px; line-height:170%; letter-spacing:0.2px; margin:0;"> You have successfully mint Fansland NFT ticket with your <u>{chain}(ChainId:{chainid})</u> wallet address: </p>
+            <p style="margin:0;"><br></p>
             <p style="font-size:14px; line-height:170%; font-weight: 600; margin:0;">{address}</p>
+            <p style="margin:0;"><br></p>
             <p style="font-size:14px; line-height:170%; letter-spacing:0.2px; margin:0;">
               Please login to <a href="https://fansland.io/">https://fansland.io</a> with this wallet address to see your NFT tickets.
             </p>

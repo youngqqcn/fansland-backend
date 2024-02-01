@@ -9,13 +9,31 @@ def main():
     email_client = SendEmail()
 
     chainid_maps = {
-        '80001': 'Polygon Mumbai'
+        # 主网
+        '137': 'Polygon Mainnet',
+        '56': 'BSC Mainnet ',
+        '1': 'Ethereum Mainnet ',
+        '42170': 'Arbitrum One Mainnet ',
+        '10': 'OP Mainnet ',
+        '43114': 'Avalanche C-Chain Mainnet ',
+
+        # 测试网
+        '80001': 'Polygon Mumbai Testnet',
+        '97': 'BSC Testnet',
+        '11155111': 'Ethereum Sepolia Testnet',
+        '431614': 'Arbitrum Sepolia Testnet',
+        '11155420': 'Op Sepolia Testnet',
+        '43113': 'Avalanche Fuji Testnet'
     }
 
     typeid_maps = {
         '0': "Fansland Type 1",
         '1': "Fansland Type 2",
         '2': "Fansland Type 3",
+        '3': "Fansland Type 4",
+        '4': "Fansland Type 5",
+        '5': "Fansland Type 6",
+        '6': "Fansland Type 7",
     }
 
 
@@ -57,6 +75,7 @@ def main():
                         qrcodes=[qrcode_txt],
                         address=address,
                         chain=chain,
+                        chainid=chainid,
                         ticket_type = typeid_maps[str(type_id)]
                     ))
 
