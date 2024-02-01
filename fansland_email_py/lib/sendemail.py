@@ -58,7 +58,7 @@ class SendEmail:
         # msg_body = MIMEMultipart('alternative')
         msg_body = MIMEMultipart('alternative')
 
-        html_content = get_mint_template(send_msg.address, len(qrcodes)).encode("utf-8")
+        html_content = get_mint_template(send_msg.address, ticket_type=send_msg.ticket_type).encode("utf-8")
         print('========html_content===========')
         print(html_content)
         print('===================')
