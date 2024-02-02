@@ -51,6 +51,15 @@ def main():
                 type_id = items[3]
                 qrcode_txt = items[4]
 
+                # 修复重复发送邮件
+                only_once_email_key = 'email:{}:{}:{}:{}'.format(chainid, token_id, str(address).lower())
+                print('唯一邮件key: {}'.format(only_once_email_key))
+                ret =r.get(only_once_email_key)
+                if ret is not None:
+                    if ret.decode('utf-8') == user_email:
+                        print("此key已存在, 不再重复发送, key:  {}".format(only_once_email_key))
+                        continue
+
                 # 查一下redis该tokenid的最新owner
                 user_address = r.get('nft:{}:nft:tokenid:owner:{}'.format(chainid, token_id))
                 if user_address is None:
@@ -83,6 +92,10 @@ def main():
 
                 print("Email sent! Message ID:"),
                 print(response['MessageId'])
+
+                # 发送完邮件, 设置一下key
+                ret = r.set(only_once_email_key, user_email)
+                print('set key: {}, ret:{}'.format(only_once_email_key, ret))
         except ClientError as e:
             print(e.response['Error']['Message'])
         except Exception as e:
