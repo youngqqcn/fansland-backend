@@ -121,13 +121,13 @@ async fn update_token_id_owner(
         return Ok(());
     }
     // TODO: 控制步长，步子不能太大，有些RPC不支持超过1000
-    let mut multi_loop = false;
-    while multi_loop {
+    let mut continue_loop = true;
+    while continue_loop {
         if scan_to_block - scan_from_block > 500 {
             scan_to_block = scan_from_block + 500;
-            multi_loop = true;
+            continue_loop = true;
         } else {
-            multi_loop = false;
+            continue_loop = false;
         }
         if scan_from_block == 0 {
             scan_from_block = scan_to_block - 100;
