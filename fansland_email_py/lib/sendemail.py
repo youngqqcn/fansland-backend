@@ -41,7 +41,7 @@ class SendEmail:
         SENDER = "Fansland <no-reply@fansland.io>"
 
         # The subject line for the email.
-        SUBJECT = "Fansland NFT Ticket Mint Success"
+        SUBJECT = "Fansland NFT Ticket #{} Mint Success".format(send_msg.token_id)
 
         # The character encoding for the email.
         CHARSET ="utf-8"
