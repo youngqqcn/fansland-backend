@@ -117,78 +117,87 @@ async fn update_token_id_owner(
         tracing::info!("已扫到最新区块:{scan_to_block}");
         return Ok(());
     }
-    // TODO: 控制步长，步子不能太大，有些RPC不支持超过1000
-    // if scan_to_block - scan_from_block > 100 {
-    //     scan_to_block = scan_from_block + 100;
-    // }
+
     if scan_from_block == 0 {
-        scan_from_block = scan_to_block - 100;
+        scan_from_block = scan_to_block - 10000;
     }
     tracing::info!("ChainID-{chainid}扫描区块范围:{scan_from_block} - {scan_to_block}");
 
-    // 合约的转移事件： event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
-    let filter = Filter::new()
-        .address(fansland_nft_contract_address.parse::<Address>()?)
-        .event("Transfer(address,address,uint256)")
-        .from_block(scan_from_block)
-        .to_block(scan_to_block);
+    let mut tmp_from_block = scan_from_block;
+    loop {
+        // 控制步长，步子不能太大，有些RPC不支持超过1000
+        let tmp_to_block = std::cmp::min(tmp_from_block + 666, scan_to_block);
+        if tmp_from_block > tmp_to_block {
+            break
+        }
 
-    let logs = client.get_logs(&filter).await?;
-    tracing::info!("{} Transfer events found!", logs.iter().len());
-    for log in logs.iter() {
-        let from_addr_h160 = Address::from(log.topics[1]);
-        let to_addr_h160 = Address::from(log.topics[2]);
+        // 合约的转移事件： event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
+        let filter = Filter::new()
+            .address(fansland_nft_contract_address.parse::<Address>()?)
+            .event("Transfer(address,address,uint256)")
+            .from_block(tmp_from_block)
+            .to_block(tmp_to_block);
 
-        let from_addr_hex = "0x".to_string() + &hex::encode(from_addr_h160.to_fixed_bytes());
-        let to_addr_hex = "0x".to_string() + &hex::encode(to_addr_h160.to_fixed_bytes());
+        let logs = client.get_logs(&filter).await?;
+        tracing::info!("{} Transfer events found!", logs.iter().len());
+        for log in logs.iter() {
+            let from_addr_h160 = Address::from(log.topics[1]);
+            let to_addr_h160 = Address::from(log.topics[2]);
 
-        let token_id = U256::from_big_endian(&log.topics[3].as_bytes()[29..32]);
-        tracing::info!(
-            "from_addr = {from_addr_hex}, to_addr = {to_addr_hex}, token_id= {token_id}"
-        );
+            let from_addr_hex = "0x".to_string() + &hex::encode(from_addr_h160.to_fixed_bytes());
+            let to_addr_hex = "0x".to_string() + &hex::encode(to_addr_h160.to_fixed_bytes());
 
-        // 获取nft票的类型
-        let type_id: u64 = contract.token_id_type_map(token_id).call().await?.as_u64();
+            let token_id = U256::from_big_endian(&log.topics[3].as_bytes()[29..32]);
+            tracing::info!(
+                "from_addr = {from_addr_hex}, to_addr = {to_addr_hex}, token_id= {token_id}"
+            );
 
-        let qrcode_txt = gen_qrcode_text(chainid, token_id.as_u64(), to_addr_hex.to_lowercase());
-        tracing::info!("token_id qrcode: {}", qrcode_txt);
+            // 获取nft票的类型
+            let type_id: u64 = contract.token_id_type_map(token_id).call().await?.as_u64();
 
-        // 插入数据库
-        let _ = redis::pipe()
-            .set(
-                key_prefix.clone() + &format!("nft:tokenid:owner:{token_id}"),
-                &to_addr_hex,
-            )
-            .set(
-                key_prefix.clone() + &format!("nft:tokenid:type:{token_id}"),
-                type_id,
-            )
-            .sadd(key_prefix.clone() + "tokenids", token_id.as_u64())
-            .sadd(key_prefix.clone() + "holders", &to_addr_hex)
-            .rpush(
-                "sendemail",
-                &format!(
-                    "{};{};{};{};{}",
-                    chainid,
-                    to_addr_hex.clone().to_owned(),
-                    token_id,
+            let qrcode_txt =
+                gen_qrcode_text(chainid, token_id.as_u64(), to_addr_hex.to_lowercase());
+            tracing::info!("token_id qrcode: {}", qrcode_txt);
+
+            // 插入数据库
+            let _ = redis::pipe()
+                .set(
+                    key_prefix.clone() + &format!("nft:tokenid:owner:{token_id}"),
+                    &to_addr_hex,
+                )
+                .set(
+                    key_prefix.clone() + &format!("nft:tokenid:type:{token_id}"),
                     type_id,
-                    qrcode_txt
-                ),
-            )
+                )
+                .sadd(key_prefix.clone() + "tokenids", token_id.as_u64())
+                .sadd(key_prefix.clone() + "holders", &to_addr_hex)
+                .rpush(
+                    "sendemail",
+                    &format!(
+                        "{};{};{};{};{}",
+                        chainid,
+                        to_addr_hex.clone().to_owned(),
+                        token_id,
+                        type_id,
+                        qrcode_txt
+                    ),
+                )
+                .ignore()
+                .query_async(&mut rds_conn)
+                .await?;
+        }
+
+        // 更新数据库中扫描高度
+        let _ = redis::pipe()
+            .set(key_prefix.clone() + "cur_scan_block", tmp_to_block)
             .ignore()
             .query_async(&mut rds_conn)
             .await?;
+
+
+        tracing::info!("ChainID-{chainid}更新扫描高度为{scan_to_block}成功!");
+        tmp_from_block = tmp_to_block;
     }
-
-    // 更新数据库中扫描高度
-    let _ = redis::pipe()
-        .set(key_prefix.clone() + "cur_scan_block", scan_to_block)
-        .ignore()
-        .query_async(&mut rds_conn)
-        .await?;
-
-    tracing::info!("ChainID-{chainid}更新扫描高度为{scan_to_block}成功!");
     Ok(())
 }
 
