@@ -82,6 +82,8 @@ async fn update_token_id_owner(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let provider = Provider::<Http>::try_from(rpc_url)?;
     abigen!(FanslandNFTContract, "FanslandNFT.abi",);
+    tracing::info!("nft_contract address: {}", contract_address);
+    tracing::info!("rpc_url : {}", rpc_url);
 
     let client = Arc::new(provider);
 

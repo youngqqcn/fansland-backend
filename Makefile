@@ -12,3 +12,5 @@ start:
 
 stop:
 	ps aux | grep fansland | awk '{print $2}' | xargs kill
+
+
