@@ -121,17 +121,14 @@ async fn update_token_id_owner(
         return Ok(());
     }
     // TODO: 控制步长，步子不能太大，有些RPC不支持超过1000
-    let mut continue_loop = true;
-    while continue_loop {
-        if scan_to_block - scan_from_block > 500 {
-            scan_to_block = scan_from_block + 500;
-            continue_loop = true;
-        } else {
-            continue_loop = false;
-        }
-        if scan_from_block == 0 {
-            scan_from_block = scan_to_block - 100;
-        }
+    if scan_to_block - scan_from_block > 500 {
+        scan_to_block = scan_from_block + 500;
+    }
+    if scan_from_block == 0 {
+        scan_from_block = scan_to_block - 100;
+    }
+
+    while latest_block.as_u64() > scan_to_block {
         tracing::info!("ChainID-{chainid}扫描区块范围:{scan_from_block} - {scan_to_block}");
 
         // 合约的转移事件： event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
@@ -198,6 +195,13 @@ async fn update_token_id_owner(
             .await?;
 
         tracing::info!("ChainID-{chainid}更新扫描高度为{scan_to_block}成功!");
+
+        // 修改状态
+        scan_to_block += if latest_block.as_u64() - scan_to_block < 500 {
+            latest_block.as_u64()
+        } else {
+            500
+        };
     }
     Ok(())
 }
