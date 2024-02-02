@@ -77,7 +77,8 @@ def main():
                         address=address,
                         chain=chain,
                         chainid=chainid,
-                        ticket_type = typeid_maps[str(type_id)]
+                        ticket_type = typeid_maps[str(type_id)],
+                        token_id=token_id
                     ))
 
                 print("Email sent! Message ID:"),
