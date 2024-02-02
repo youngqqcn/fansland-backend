@@ -3,6 +3,7 @@ import redis
 
 from lib.sendemail import SendEmail, SendEmailMsg
 from botocore.exceptions import ClientError
+import traceback
 
 def main():
     r = redis.Redis(host='localhost', port=6379, db=0, password='gooDluck4u')
@@ -39,11 +40,13 @@ def main():
 
     while True:
         print('=================start send email ===============')
+        save_back = ''
         try:
             raw_msg = r.lpop('sendemail')
             if raw_msg is  None:
                 print('empty email queue')
             else:
+                save_back = raw_msg.decode('utf-8')
                 items = raw_msg.decode('utf-8').split(';')
                 chainid = items[0]
                 address = items[1]
@@ -52,7 +55,7 @@ def main():
                 qrcode_txt = items[4]
 
                 # 修复重复发送邮件
-                only_once_email_key = 'email:{}:{}:{}:{}'.format(chainid, token_id, str(address).lower())
+                only_once_email_key = f'email:{chainid}:{token_id}:{str(address).lower()}'
                 print('唯一邮件key: {}'.format(only_once_email_key))
                 ret =r.get(only_once_email_key)
                 if ret is not None:
@@ -96,10 +99,14 @@ def main():
                 # 发送完邮件, 设置一下key
                 ret = r.set(only_once_email_key, user_email)
                 print('set key: {}, ret:{}'.format(only_once_email_key, ret))
-        except ClientError as e:
-            print(e.response['Error']['Message'])
+        # except ClientError as e:
+        #     print(e.response['Error']['Message'])
         except Exception as e:
             print("errror=========\n{}".format(e))
+            # 放回去队列尾部
+            r.rpush('sendemail', save_back)
+            save_back = ''
+            traceback.print_exc()
 
         time.sleep(5)
 
