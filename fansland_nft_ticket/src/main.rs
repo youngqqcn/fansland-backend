@@ -42,6 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let chainid: u64 = args.chainid;
     let rpc_url = std::env::var(format!("RPC_URL_{chainid}")).unwrap();
     let contract_address = std::env::var(format!("FANSLAND_NFT_{chainid}")).unwrap();
+    let contract_create_block: u64 = std::env::var(format!("CONTRACT_CREATE_BLOCK_{chainid}"))
+        .unwrap()
+        .parse()?;
 
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
@@ -59,7 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Running...");
     while r.load(Ordering::SeqCst) {
         // 执行你的操作
-        let _ = update_token_id_owner(&rpc_url, &contract_address, chainid).await;
+        let _ = update_token_id_owner(&rpc_url, &contract_address, chainid, contract_create_block)
+            .await;
         // 睡眠一段时间，然后继续下一次循环
         for _ in 0..10 {
             sleep(Duration::from_secs(1)).await;
@@ -79,6 +83,7 @@ async fn update_token_id_owner(
     rpc_url: &String,
     contract_address: &String,
     chainid: u64,
+    contract_create_block: u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let provider = Provider::<Http>::try_from(rpc_url)?;
     abigen!(FanslandNFTContract, "FanslandNFT.abi",);
@@ -100,35 +105,32 @@ async fn update_token_id_owner(
     let key_prefix = "nft:".to_owned() + &chainid.to_string() + ":";
 
     // 获取当前数据库中的扫描起始高度
-    let mut scan_from_block: u64 = match redis::cmd("GET")
+    let scan_from_block: u64 = match redis::cmd("GET")
         .arg(key_prefix.clone() + "cur_scan_block")
         .query_async::<_, Option<String>>(&mut rds_conn)
         .await?
     {
         Some(m) => m.parse()?,
-        None => 0,
+        None => contract_create_block, // 如果获取不到，则从合约创建的区块高度开始
     };
 
     // 获取当前最新高度
     let latest_block = client.get_block_number().await?;
-    let scan_to_block = latest_block.as_u64(); // 10 blocks to wait
+    let scan_to_block = latest_block.as_u64(); // 不等区块确认
     if scan_to_block <= scan_from_block {
         // 不用扫
         tracing::info!("已扫到最新区块:{scan_to_block}");
         return Ok(());
     }
 
-    if scan_from_block == 0 {
-        scan_from_block = scan_to_block - 10000;
-    }
     tracing::info!("ChainID-{chainid}扫描区块范围:{scan_from_block} - {scan_to_block}");
 
     let mut tmp_from_block = scan_from_block;
     loop {
         // 控制步长，步子不能太大，有些RPC不支持超过1000
-        let tmp_to_block = std::cmp::min(tmp_from_block + 666, scan_to_block);
-        if tmp_from_block > tmp_to_block {
-            break
+        let tmp_to_block = std::cmp::min(tmp_from_block + 866, scan_to_block);
+        if tmp_from_block >= tmp_to_block {
+            break;
         }
 
         // 合约的转移事件： event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
@@ -194,8 +196,7 @@ async fn update_token_id_owner(
             .query_async(&mut rds_conn)
             .await?;
 
-
-        tracing::info!("ChainID-{chainid}更新扫描高度为{scan_to_block}成功!");
+        tracing::info!("ChainID-{chainid}更新扫描高度为{tmp_to_block}成功!");
         tmp_from_block = tmp_to_block;
     }
     Ok(())
