@@ -11,6 +11,5 @@ start:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 43113 > nft_ticket_43113.log 2>&1 &
 
 stop:
-	ps aux | grep fansland | awk '{print $2}' | xargs kill
-
+    ps aux | grep fansland | grep -v grep | awk '{print $$2}' | xargs kill
 
