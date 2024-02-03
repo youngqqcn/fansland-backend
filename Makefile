@@ -14,9 +14,13 @@ start-nft:
 
 start-email:
 	cd fansland_email_py && \
-	(nohup python3 -u main.py > ../email_output.log 2>&1 &) && \
+	(nohup python3 -u fansland_email.py > ../email_output.log 2>&1 &) && \
 	cd ..
 
 stop:
 	ps aux | grep fansland | grep -v grep | awk '{print $$2}' | xargs kill
 
+
+# 删除redis的 key
+# redis-cli -a gooDluck4u -n 0  KEYS "email:*" | xargs redis-cli -a gooDluck4u -n 0  DEL
+# redis-cli -a gooDluck4u -n 0  KEYS "nft:*" | xargs redis-cli -a gooDluck4u -n 0  DEL

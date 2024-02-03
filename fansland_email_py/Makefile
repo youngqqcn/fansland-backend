@@ -1,2 +1,2 @@
 start:
-	nohup python3 -u main.py > email_output.log 2>&1 &
+	nohup python3 -u fansland_email.py > email_output.log 2>&1 &
