@@ -28,13 +28,18 @@ def main():
     }
 
     typeid_maps = {
-        '0': "Fansland Type 1",
-        '1': "Fansland Type 2",
-        '2': "Fansland Type 3",
-        '3': "Fansland Type 4",
-        '4': "Fansland Type 5",
-        '5': "Fansland Type 6",
-        '6': "Fansland Type 7",
+        '0': "Fansland Type 0",
+        '1': "Fansland Type 1",
+        '2': "Fansland Type 2",
+        '3': "Fansland Type 3",
+        '4': "Fansland Type 4",
+        '5': "Fansland Type 5",
+        '6': "Fansland Type 6",
+        '7': "Fansland Type 7",
+        '8': "Fansland Type 8",
+        '9': "Fansland Type 9",
+        '10': "Fansland Type 10",
+        '11': "Fansland Type 11",
     }
 
 
