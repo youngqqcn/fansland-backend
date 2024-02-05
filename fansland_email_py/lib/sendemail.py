@@ -71,11 +71,12 @@ class SendEmail:
         # msg_body.attach(textpart)
         msg_body.attach(htmlpart)
 
-        for i in range(len(qrcodes)):
-            img_data = gen_qrcode_png_bytes(qrcodes[i])
+        if True:
+            # for i in range(len(qrcodes)):
+            img_data = gen_qrcode_png_bytes(qrcodes[0])
             embed_qrcode = MIMEImage(img_data)
-            embed_qrcode.add_header('Content-ID', '<qrcode{}>'.format(i))
-            embed_qrcode.add_header('Content-Disposition', 'inline', filename="qrcode{}.png".format(i))
+            embed_qrcode.add_header('Content-ID', '<qrcode>')
+            embed_qrcode.add_header('Content-Disposition', 'inline', filename="qrcode.png")
             msg_body.attach(embed_qrcode);
         msg.attach(msg_body)
 
@@ -85,7 +86,9 @@ class SendEmail:
             att = MIMEApplication(img_data)
             # Add a header to tell the email client to treat this part as an attachment,
             # and to give the attachment a name.
-            att.add_header('Content-Disposition','attachment',filename="qrcode{}.png".format(i))
+            att.add_header('Content-Disposition','attachment',
+                           filename="{}_tokenid_{}_check_in_qrcode.png".format(
+                               send_msg.chain.replace(' ', '_'), send_msg.token_id))
 
             # Attach the multipart/alternative child container to the multipart/mixed
             # parent container.

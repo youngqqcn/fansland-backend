@@ -94,7 +94,7 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
                 </li>
             </ul>
             <p style="text-align: center;">
-              <img src="cid:qrcode0" alt="qrcode">
+              <img src="cid:qrcode" alt="qrcode">
             </p>
             <p style="font-size:14px; text-align:center; margin:0;color:black;">
                 (*Please keep safely, do not transfer it to others )
