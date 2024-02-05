@@ -56,7 +56,7 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
             <p style="font-size:14px;  line-height:110%;   margin:0; color:black;">
                Now, we are delighted to provide you with the following details about your NFT ticket:
             </p>
-            <ul style="padding-inline-start:15px;">
+            <ul style="padding-inline-start:20px;">
                 <li>
                     <p style="font-size:14px;    line-height:150%;   margin:0; color:black;">
                     🎫 Ticket Type: <span style="font-weight: 600;">{ticketType}</span>
@@ -97,7 +97,7 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
               <img src="cid:qrcode0" alt="qrcode">
             </p>
             <p style="font-size:14px; text-align:center; margin:0;color:black;">
-                <u style="color:black;">( Please keep safely, do not transfer it to others )</u>
+                (*Please keep safely, do not transfer it to others )
             </p>
             <p style="margin:0;"><br></p>
             <p style="margin:0;"><br></p>
@@ -123,10 +123,10 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
               Build The Best Web3 Infrastructure for Global FANS
             </p>
             <p style="text-align: center;">
-              <a style="margin: 0 6px;" href="https://twitter.com/fansland_io" target="_blank">
-                <img style="border-radius: 0%; height:20px; width: 20px; overflow: hidden;" src="https://static.fansland.io/email/twitter.png" alt="">
+              <a style="margin:0;text-decoration: none;" href="https://medium.com/@fansland" target="_blank">
+                <img style="border-radius: 0%;height:20px; width: 20px; overflow: hidden;"  src="https://static.fansland.io/email/twitter.png" alt="">
               </a>
-              <a style="margin: 0 ;" href="https://medium.com/@fansland" target="_blank">
+              <a style="margin:0;text-decoration: none;" href="https://medium.com/@fansland" target="_blank">
                 <img style="border-radius: 0%;height:20px; width: 20px; overflow: hidden;"  src="https://static.fansland.io/email/medium.png" alt="">
               </a>
             </p>
