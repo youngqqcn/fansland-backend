@@ -87,7 +87,7 @@ class SendEmail:
             # Add a header to tell the email client to treat this part as an attachment,
             # and to give the attachment a name.
             att.add_header('Content-Disposition','attachment',
-                           filename="{}_tokenid_{}_check_in_qrcode.png".format(
+                           filename="qrcode_{}_tokenid_{}.png".format(
                                send_msg.chain.replace(' ', '_'), send_msg.token_id))
 
             # Attach the multipart/alternative child container to the multipart/mixed
