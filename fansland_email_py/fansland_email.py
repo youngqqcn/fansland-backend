@@ -11,12 +11,12 @@ def main():
 
     chainid_maps = {
         # 主网
-        '137': 'Polygon Mainnet',
-        '56': 'BSC Mainnet ',
-        '1': 'Ethereum Mainnet ',
-        '42170': 'Arbitrum One Mainnet ',
+        '137': 'Polygon PoS',
+        '56': 'BNB Smart Chain',
+        '1': 'Ethereum',
+        '42161': 'Arbitrum One',
         '10': 'OP Mainnet ',
-        '43114': 'Avalanche C-Chain Mainnet ',
+        '43114': 'Avalanche C-Chain ',
 
         # 测试网
         '80001': 'Polygon Mumbai Testnet',
