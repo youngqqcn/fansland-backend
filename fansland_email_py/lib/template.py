@@ -103,7 +103,7 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
             <p style="margin:0;"><br></p>
             <p style="text-align: center;">
               <a href="https://fansland.io" target="_blank">
-                <button style="border: none; color: #FFF; font-size: 14px; font-weight: 600; border-radius: 12px; padding: 12px 24px; background: linear-gradient(251deg, #AE18FD 8%, #FC6512 90%);">View Event Details</button>
+                <button style="border: none; color: #FFF !important; font-size: 14px; font-weight: 600; border-radius: 12px; padding: 12px 24px; background: linear-gradient(251deg, #AE18FD 8%, #FC6512 90%);">View Event Details</button>
               </a>
             </p>
             <p style="margin:0;"><br></p>
