@@ -56,7 +56,7 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
             <p style="font-size:14px;  line-height:110%;   margin:0; color:black;">
                Now, we are delighted to provide you with the following details about your NFT ticket:
             </p>
-            <ul style="padding-inline-start: 0;">
+            <ul style="padding-inline-start:0;">
                 <li>
                     <p style="font-size:14px;    line-height:110%;   margin:0; color:black;">
                     🎫 Ticket Type: <span style="font-weight: 600;">{ticketType}</span>
