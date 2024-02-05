@@ -35,9 +35,9 @@
 
 
 def get_mint_template(chain, chainid, address, ticket_type, token_id) :
-    location = "Thailand Bangkok"
+    location = "Bangkok,Thailand"
     ticketType = ticket_type
-    date = "3-6 May 2024"
+    date = "4-6 May 2024"
     first_part = f"""
 <div style=width:100%; background-color:#E4E5E7;padding:2px;>
     <div style="max-width:640px; margin:0 auto; background:#ffffff;border-radius:10px; overflow:hidden;">
