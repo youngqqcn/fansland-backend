@@ -668,7 +668,7 @@ pub async fn verify_sig(
         .map_err(new_internal_error)?
         .as_millis();
     // 正负5秒， 即时间窗口有10s
-    if now_ts.abs_diff(api_timestamp) > 5_000 {
+    if now_ts.abs_diff(api_timestamp) > 10_000 {
         tracing::error!("====时间戳无效==========");
         return Err((
             StatusCode::BAD_REQUEST,
