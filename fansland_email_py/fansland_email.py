@@ -15,8 +15,8 @@ def main():
         '56': 'BNB Smart Chain',
         '1': 'Ethereum',
         '42161': 'Arbitrum One',
-        '10': 'OP Mainnet ',
-        '43114': 'Avalanche C-Chain ',
+        '10': 'OP Mainnet',
+        '43114': 'Avalanche C-Chain',
 
         # 测试网
         '80001': 'Polygon Mumbai Testnet',
