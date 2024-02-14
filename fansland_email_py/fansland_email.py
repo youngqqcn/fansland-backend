@@ -17,6 +17,10 @@ def main():
         '42161': 'Arbitrum One',
         '10': 'OP Mainnet',
         '43114': 'Avalanche C-Chain',
+        '1101': 'Polygon zkEVM',
+        '204': 'opBNB',
+        '8453': 'Base',
+        '59144': 'Linea',
 
         # 测试网
         '80001': 'Polygon Mumbai Testnet',
@@ -24,7 +28,11 @@ def main():
         '11155111': 'Ethereum Sepolia Testnet',
         '421614': 'Arbitrum Sepolia Testnet',
         '11155420': 'Op Sepolia Testnet',
-        '43113': 'Avalanche Fuji Testnet'
+        '43113': 'Avalanche Fuji Testnet',
+        '1442': 'Polygon zkEVM Testnet',
+        '5611': 'opBNB Testnet',
+        '84532': 'Base Sepolia Testnet',
+        '59140': 'Linea Goerli Testnet',
     }
 
     typeid_maps = {
