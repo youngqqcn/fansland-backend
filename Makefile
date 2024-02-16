@@ -11,6 +11,11 @@ start-nft-main:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 10 > nft_ticket_10.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --chainid 43114 > nft_ticket_43114.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --chainid 1 > nft_ticket_1.log 2>&1 &
+	cargo run --bin fansland_nft_ticket -r -- --chainid 1101 > nft_ticket_1101.log 2>&1 &
+	cargo run --bin fansland_nft_ticket -r -- --chainid 204 > nft_ticket_204.log 2>&1 &
+	cargo run --bin fansland_nft_ticket -r -- --chainid 8453 > nft_ticket_8453.log 2>&1 &
+	cargo run --bin fansland_nft_ticket -r -- --chainid 59144 > nft_ticket_59144.log 2>&1 &
+
 
 start-nft-test:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 80001 > nft_ticket_80001.log 2>&1 &
