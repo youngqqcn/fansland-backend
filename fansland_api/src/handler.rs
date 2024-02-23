@@ -97,7 +97,7 @@ pub async fn get_address_points(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressPointsReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
@@ -109,7 +109,6 @@ pub async fn get_address_points(
     // 查询地址积分
     // 通过命令: ZREVRANGEBYSCORE points:0x51bdbad59a24207b32237e5c47e866a32a8d5ed8 9999999999 0 WITHSCORES
 
-    let mut total_points: u32 = 0;
 
     let rank_prefix_key: String = String::from("pointsrank");
     let member_key = &req.address.to_lowercase();
@@ -120,7 +119,7 @@ pub async fn get_address_points(
         .map_err(new_internal_error)?;
 
     tracing::info!("total points: {:?}", total_ret);
-    total_points = if total_ret.len() > 0 {
+    let total_points = if total_ret.len() > 0 {
         total_ret[0]
             .as_ref()
             .unwrap_or(&String::from("0"))
@@ -143,7 +142,7 @@ pub async fn get_address_points_history(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressPointsHistoryReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
