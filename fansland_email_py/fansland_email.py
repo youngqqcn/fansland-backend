@@ -22,6 +22,7 @@ def main():
         '8453': 'Base',
         '59144': 'Linea',
 
+
         # 测试网
         '80001': 'Polygon Mumbai Testnet',
         '97': 'BSC Testnet',
@@ -33,21 +34,17 @@ def main():
         '5611': 'opBNB Testnet',
         '84532': 'Base Sepolia Testnet',
         '59140': 'Linea Goerli Testnet',
+
+        # solana
+        'solona': 'Solana Mainnet',
+        'devnet': 'Solana Devnet',
     }
 
+    # TODO: 修改成正式的票名
     typeid_maps = {
         '0': "Fansland Type 0",
         '1': "Fansland Type 1",
         '2': "Fansland Type 2",
-        '3': "Fansland Type 3",
-        '4': "Fansland Type 4",
-        '5': "Fansland Type 5",
-        '6': "Fansland Type 6",
-        '7': "Fansland Type 7",
-        '8': "Fansland Type 8",
-        '9': "Fansland Type 9",
-        '10': "Fansland Type 10",
-        '11': "Fansland Type 11",
     }
 
 
