@@ -29,6 +29,9 @@ start-nft-test:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 84532 > nft_ticket_84532.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --chainid 59140 > nft_ticket_59140.log 2>&1 &
 
+start-rank:
+	cargo run --bin fansland_points_rank -r > points_rank.log 2>&1 &
+
 start-email:
 	cd fansland_email_py && \
 	(nohup python3 -u fansland_email.py > ../email_output.log 2>&1 &) && \
