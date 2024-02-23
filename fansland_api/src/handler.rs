@@ -13,8 +13,8 @@ use crate::{
         BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
         GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, Point,
         QueryAddressPointsReq, QueryAddressPointsResp, QueryAddressReq, QueryAddressResp,
-        QueryTicketQrCodeReq, QueryTicketQrCodeResp, UpdateSecretLinkPasswdReq,
-        UpdateSecretLinkPasswdResp,
+        QueryPointsRankReq, QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, Rank,
+        UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
 };
@@ -36,8 +36,59 @@ pub struct AppState {
     pub rds_pool: RedisPool<Client, Connection>,
 }
 
-// get login nonce
-// pub async fn get_login_nonce(
+// 获取积分排行榜
+pub async fn get_points_rank(
+    headers: HeaderMap,
+    State(app_state): State<AppState>,
+    JsonReq(req): JsonReq<QueryPointsRankReq>,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
+        .await
+        .map_err(new_internal_error)?;
+
+    // 查询地址积分
+    // 通过命令: ZREVRANGEBYSCORE points:0x51bdbad59a24207b32237e5c47e866a32a8d5ed8 9999999999 0 WITHSCORES
+    // let point_prefix_key = String::from("points:") + &req.address.to_lowercase();
+    // tracing::info!("{point_prefix_key}");
+
+    let start_index: isize = (req.page * req.page_size) as isize;
+    let end_index: isize = start_index + req.page_size as isize - 1;
+
+    let rank_prefix_key: String = String::from("pointsrank");
+    let points_rank_ret: Vec<Vec<String>> = redis::pipe()
+        .zrevrange_withscores(rank_prefix_key, start_index, end_index)
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?;
+
+    tracing::info!("points rank: {:?}", points_rank_ret);
+    tracing::info!("points rank length: {:?}", points_rank_ret[0]);
+
+    let mut ranks: Vec<Rank> = Vec::new();
+    if points_rank_ret[0].len() > 0 {
+        for index in 0..(&points_rank_ret[0].len() / 2) {
+            let idx = index * 2;
+            let rank_no = 1 + (start_index + index as isize) as u32;
+            ranks.push(Rank {
+                rank_no: rank_no,
+                address: points_rank_ret[0][idx].clone(),
+                points: points_rank_ret[0][idx + 1].parse().unwrap(),
+            });
+        }
+    }
+
+    Ok(RespVO::from(&QueryPointsRankResp {
+        page: req.page,
+        page_size: req.page_size,
+        rank: ranks,
+    })
+    .resp_json())
+}
+
+// 获取地址积分
 pub async fn get_address_points(
     headers: HeaderMap,
     State(app_state): State<AppState>,
@@ -64,16 +115,16 @@ pub async fn get_address_points(
     tracing::info!("points history: {:?}", points_ret);
 
     let mut historys: Vec<Point> = Vec::new();
-    let mut total_points = 0_u64;
+    let mut total_points = 0_u32;
     if points_ret.len() > 0 && points_ret[0].len() > 0 {
         tracing::info!("points history length: {:?}", points_ret[0].len());
         for item in &points_ret[0] {
             let parts: Vec<&str> = item.split('_').collect();
-            total_points += parts[1].parse::<u64>().unwrap();
+            total_points += parts[1].parse::<u32>().unwrap();
             historys.push(Point {
                 chain_id: parts[0].parse().unwrap(),
                 value: parts[1].parse().unwrap(),
-                method:  parts[2].to_owned(),
+                method: parts[2].to_owned(),
                 timestamp: parts[3].parse().unwrap(),
                 txhash: parts[4].to_owned(),
             });

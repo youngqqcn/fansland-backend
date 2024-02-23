@@ -12,7 +12,9 @@ use tracing::{warn, Level};
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_address_points, get_login_signmsg, get_ticket_qrcode_by_secret_link, query_ticket_qrcode_by_address, query_user_by_address, sign_in_with_ethereum, update_secret_link_passwd, AppState
+    bind_email, get_address_points, get_login_signmsg, get_points_rank,
+    get_ticket_qrcode_by_secret_link, query_ticket_qrcode_by_address, query_user_by_address,
+    sign_in_with_ethereum, update_secret_link_passwd, AppState,
 };
 
 mod api;
@@ -48,14 +50,21 @@ async fn main() {
     let need_auth_routers = Router::new()
         .route("/queryAddressEmail", post(query_user_by_address))
         .route("/bindEmail", post(bind_email))
-        .route("/queryQrCodeByAddress", post(query_ticket_qrcode_by_address))
+        .route(
+            "/queryQrCodeByAddress",
+            post(query_ticket_qrcode_by_address),
+        )
         .route("/updateSlink", post(update_secret_link_passwd));
 
     let noneed_auth_routers = Router::new()
-        .route("/queryQrCodeBySlink", post(get_ticket_qrcode_by_secret_link))
+        .route(
+            "/queryQrCodeBySlink",
+            post(get_ticket_qrcode_by_secret_link),
+        )
         .route("/getSiweMsg", post(get_login_signmsg))
         .route("/signInWithEthereum", post(sign_in_with_ethereum))
-        .route("/getAddressPoints", post(get_address_points));
+        .route("/getAddressPoints", post(get_address_points))
+        .route("/getPointsRank", post(get_points_rank));
 
     let app_routers = need_auth_routers
         .merge(noneed_auth_routers)

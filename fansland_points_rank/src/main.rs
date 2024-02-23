@@ -42,7 +42,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = update_points_rank().await;
 
         // 睡眠一段时间，然后继续下一次循环
-        for _ in 0..10 {
+        // 1分钟更新一次即可
+        for _ in 0..60 {
             sleep(Duration::from_secs(1)).await;
             if !r.load(Ordering::SeqCst) {
                 break;

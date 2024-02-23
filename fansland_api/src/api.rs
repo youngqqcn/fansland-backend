@@ -113,6 +113,26 @@ pub struct Point {
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct QueryAddressPointsResp {
     pub address: String,
-    pub points: u64,
+    pub points: u32,
     pub history: Vec<Point>,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryPointsRankReq {
+    pub page: u32,
+    pub page_size: u32,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct Rank {
+    pub rank_no: u32,
+    pub address: String,
+    pub points: u32,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryPointsRankResp {
+    pub page: u32,
+    pub page_size: u32,
+    pub rank: Vec<Rank>,
 }
