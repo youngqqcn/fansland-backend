@@ -98,7 +98,7 @@ pub struct QueryTicketQrCodeResp {
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct QueryAddressPointsReq {
     pub address: String,
-    pub chain_id: u64, // 0: 查询所有 , 非0：查询指定链的积分
+    // pub chain_id: u64, // 0: 查询所有 , 非0：查询指定链的积分
 }
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
@@ -114,6 +114,21 @@ pub struct Point {
 pub struct QueryAddressPointsResp {
     pub address: String,
     pub points: u32,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryAddressPointsHistoryReq {
+    pub address: String,
+    // pub chain_id: u64, // 0: 查询所有 , 非0：查询指定链的积分
+    pub page: u32,
+    pub page_size: u32,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryAddressPointsHistoryResp {
+    pub address: String,
+    pub page: u32,
+    pub page_size: u32,
     pub history: Vec<Point>,
 }
 
@@ -121,6 +136,7 @@ pub struct QueryAddressPointsResp {
 pub struct QueryPointsRankReq {
     pub page: u32,
     pub page_size: u32,
+    pub address: String,
 }
 
 #[derive(Deserialize, Clone, Debug, Serialize)]

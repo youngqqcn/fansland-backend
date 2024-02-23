@@ -12,7 +12,7 @@ use tracing::{warn, Level};
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_address_points, get_login_signmsg, get_points_rank,
+    bind_email, get_address_points, get_address_points_history, get_login_signmsg, get_points_rank,
     get_ticket_qrcode_by_secret_link, query_ticket_qrcode_by_address, query_user_by_address,
     sign_in_with_ethereum, update_secret_link_passwd, AppState,
 };
@@ -64,6 +64,7 @@ async fn main() {
         .route("/getSiweMsg", post(get_login_signmsg))
         .route("/signInWithEthereum", post(sign_in_with_ethereum))
         .route("/getAddressPoints", post(get_address_points))
+        .route("/getAddressPointsHistory", post(get_address_points_history))
         .route("/getPointsRank", post(get_points_rank));
 
     let app_routers = need_auth_routers
