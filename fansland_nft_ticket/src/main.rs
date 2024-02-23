@@ -259,13 +259,17 @@ async fn update_token_id_owner(
                     let user_member = chainid.to_string()
                         + "_"
                         + &(user_rewards_points.to_string())
-                        + "_0_" // 0： mint奖励
+                        + "_mint_" // mint奖励
+                        + &timestamp.to_string()
+                        + "_"
                         + &log.transaction_hash.unwrap().encode_hex();
                     if kol_rewards_points > 0 {
                         let kol_member = chainid.to_string()
                             + "_"
                             + &(kol_rewards_points.to_string())
-                            + "_1_" // 1：邀请奖励
+                            + "_invite_" //邀请奖励
+                            + &timestamp.to_string()
+                            + "_"
                             + &log.transaction_hash.unwrap().encode_hex();
 
                         let _ = redis::pipe()

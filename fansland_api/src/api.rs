@@ -94,3 +94,25 @@ pub struct QueryTicketQrCodeResp {
     // pub event_name: String,
     // pub event_time: String,
 }
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryAddressPointsReq {
+    pub address: String,
+    pub chain_id: u64, // 0: 查询所有 , 非0：查询指定链的积分
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct Point {
+    pub chain_id: u64,
+    pub value: u64,
+    pub method: String,
+    pub timestamp: u64,
+    pub txhash: String,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryAddressPointsResp {
+    pub address: String,
+    pub points: u64,
+    pub history: Vec<Point>,
+}

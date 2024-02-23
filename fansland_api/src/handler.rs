@@ -11,8 +11,9 @@ use fansland_common::{jwt::JWTToken, RespVO};
 use crate::{
     api::{
         BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
-        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, QueryAddressReq,
-        QueryAddressResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, UpdateSecretLinkPasswdReq,
+        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, Point,
+        QueryAddressPointsReq, QueryAddressPointsResp, QueryAddressReq, QueryAddressResp,
+        QueryTicketQrCodeReq, QueryTicketQrCodeResp, UpdateSecretLinkPasswdReq,
         UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
@@ -33,6 +34,58 @@ const TOKEN_SECRET: &str = "GXFC@Fansland.io@2024";
 pub struct AppState {
     // pub psql_pool: Pool<Manager<PgConnection>>,
     pub rds_pool: RedisPool<Client, Connection>,
+}
+
+// get login nonce
+// pub async fn get_login_nonce(
+pub async fn get_address_points(
+    headers: HeaderMap,
+    State(app_state): State<AppState>,
+    JsonReq(req): JsonReq<QueryAddressPointsReq>,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    // 使用redis
+    let mut rds_conn = app_state
+        .rds_pool
+        .aquire()
+        .await
+        .map_err(new_internal_error)?;
+
+    // 查询地址积分
+    // 通过命令: ZREVRANGEBYSCORE points:0x51bdbad59a24207b32237e5c47e866a32a8d5ed8 9999999999 0 WITHSCORES
+    let point_prefix_key = String::from("points:") + &req.address.to_lowercase();
+
+    tracing::info!("{point_prefix_key}");
+    let points_ret: Vec<Vec<String>> = redis::pipe()
+        .zrevrangebyscore(point_prefix_key, 9999999999_u64, 0)
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?;
+
+    tracing::info!("points history: {:?}", points_ret);
+
+    let mut historys: Vec<Point> = Vec::new();
+    let mut total_points = 0_u64;
+    if points_ret.len() > 0 && points_ret[0].len() > 0 {
+        tracing::info!("points history length: {:?}", points_ret[0].len());
+        for item in &points_ret[0] {
+            let parts: Vec<&str> = item.split('_').collect();
+            total_points += parts[1].parse::<u64>().unwrap();
+            historys.push(Point {
+                chain_id: parts[0].parse().unwrap(),
+                value: parts[1].parse().unwrap(),
+                method:  parts[2].to_owned(),
+                timestamp: parts[3].parse().unwrap(),
+                txhash: parts[4].to_owned(),
+            });
+        }
+    }
+
+    Ok(RespVO::from(&QueryAddressPointsResp {
+        address: req.address,
+        points: total_points,
+        history: historys,
+    })
+    .resp_json())
 }
 
 pub async fn bind_email(
