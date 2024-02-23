@@ -253,7 +253,11 @@ async fn update_token_id_owner(
                 let user_rewards_points = total_usd_x1000 / 100;
 
                 // TODO: 特殊kol,配置不同比例的积分比例不同,  默认按照user的10%给积分
-                let kol_rewards_points = user_rewards_points * 10 / 100;
+                let mut kol_rewards_points = user_rewards_points * 10 / 100;
+                if kol_addr_hex.eq("0x0000000000000000000000000000000000000000") {
+                    // 0x0 是系统根账户，不奖励积分
+                    kol_rewards_points = 0;
+                }
 
                 if user_rewards_points > 0 {
                     let user_member = chainid.to_string()
