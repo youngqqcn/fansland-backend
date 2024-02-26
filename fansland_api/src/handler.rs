@@ -62,13 +62,30 @@ pub async fn get_points_rank(
 
     let rank_prefix_key: String = String::from("pointsrank");
     let points_rank_ret: Vec<Vec<String>> = redis::pipe()
-        .zrevrange_withscores(rank_prefix_key, start_index, end_index)
+        .zrevrange_withscores(&rank_prefix_key, start_index, end_index)
         .query_async(&mut rds_conn)
         .await
         .map_err(new_internal_error)?;
 
     tracing::info!("points rank: {:?}", points_rank_ret);
     tracing::info!("points rank length: {:?}", points_rank_ret[0]);
+
+    // 获取总条数
+    let total_counts: Vec<u32> = redis::pipe()
+        .zcard(&rank_prefix_key)
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?;
+
+    // let total_counts = if total_counts_ret.len() > 0 {
+    //     total_counts_ret[0]
+    //         .as_ref()
+    //         .unwrap_or(&String::from("0"))
+    //         .parse()
+    //         .unwrap_or(0)
+    // } else {
+    //     0
+    // };
 
     let mut ranks: Vec<Rank> = Vec::new();
     if points_rank_ret[0].len() > 0 {
@@ -84,6 +101,7 @@ pub async fn get_points_rank(
     }
 
     Ok(RespVO::from(&QueryPointsRankResp {
+        total: total_counts[0],
         page: req.page,
         page_size: req.page_size,
         rank: ranks,
@@ -108,7 +126,6 @@ pub async fn get_address_points(
 
     // 查询地址积分
     // 通过命令: ZREVRANGEBYSCORE points:0x51bdbad59a24207b32237e5c47e866a32a8d5ed8 9999999999 0 WITHSCORES
-
 
     let rank_prefix_key: String = String::from("pointsrank");
     let member_key = &req.address.to_lowercase();
@@ -142,7 +159,7 @@ pub async fn get_address_points_history(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressPointsHistoryReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
@@ -160,10 +177,18 @@ pub async fn get_address_points_history(
     let count = req.page_size as isize;
 
     tracing::info!("{point_prefix_key}");
+
+    // 获取总条数
+    let total_counts: Vec<u32> = redis::pipe()
+        .zcard(&point_prefix_key)
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(new_internal_error)?;
+
     let mut historys: Vec<Point> = Vec::new();
     if req.page_size > 0 {
         let points_ret: Vec<Vec<String>> = redis::pipe()
-            .zrevrangebyscore_limit(point_prefix_key, 9999999999_u64, 0, offset, count)
+            .zrevrangebyscore_limit(&point_prefix_key, 9999999999_u64, 0, offset, count)
             .query_async(&mut rds_conn)
             .await
             .map_err(new_internal_error)?;
@@ -187,6 +212,7 @@ pub async fn get_address_points_history(
 
     Ok(RespVO::from(&QueryAddressPointsHistoryResp {
         address: req.address,
+        total: total_counts[0],
         page: req.page,
         page_size: req.page_size,
         history: historys,
