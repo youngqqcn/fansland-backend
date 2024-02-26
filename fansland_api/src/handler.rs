@@ -43,7 +43,7 @@ pub async fn get_points_rank(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryPointsRankReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
@@ -159,7 +159,7 @@ pub async fn get_address_points_history(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressPointsHistoryReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
