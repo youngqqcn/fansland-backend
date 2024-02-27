@@ -67,8 +67,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Running...");
     while r.load(Ordering::SeqCst) {
         // 执行你的操作
-        let _ = update_token_id_owner(&rpc_url, &contract_address, chainid, contract_create_block)
-            .await;
+        let err =
+            update_token_id_owner(&rpc_url, &contract_address, chainid, contract_create_block)
+                .await;
+        match err {
+            Ok(_) => {}
+            Err(e) => {
+                tracing::error!("error:{e}");
+            }
+        }
+
         // 睡眠一段时间，然后继续下一次循环
         for _ in 0..10 {
             sleep(Duration::from_secs(1)).await;
