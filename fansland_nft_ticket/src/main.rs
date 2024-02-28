@@ -173,9 +173,7 @@ async fn update_token_id_owner(
         tracing::info!("{} Transfer events found!", logs.iter().len());
         for log in logs.iter() {
             // 解决 noderal 节点的限频 https://docs.nodereal.io/docs/cups-rate-limit
-            if logs.len() > 10 {
-                sleep(Duration::from_millis(100)).await;
-            }
+            sleep(Duration::from_millis(200)).await;
 
             tracing::info!("txhash: {}", &log.transaction_hash.unwrap().encode_hex());
             // Transfer evnet
