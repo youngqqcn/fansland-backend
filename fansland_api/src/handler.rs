@@ -115,7 +115,8 @@ pub async fn get_address_points(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressPointsReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_token(headers, &app_state, req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
@@ -124,27 +125,47 @@ pub async fn get_address_points(
         .await
         .map_err(new_internal_error)?;
 
-    // 查询地址积分
+    //==============方案1：查询地址积分并计算 ===============
     // 通过命令: ZREVRANGEBYSCORE points:0x51bdbad59a24207b32237e5c47e866a32a8d5ed8 9999999999 0 WITHSCORES
-
-    let rank_prefix_key: String = String::from("pointsrank");
-    let member_key = &req.address.to_lowercase();
-    let total_ret: Vec<Option<String>> = redis::pipe()
-        .zscore(rank_prefix_key, member_key)
+    let point_prefix_key = String::from("points:") + &req.address.to_lowercase();
+    tracing::info!("{point_prefix_key}");
+    let points_ret: Vec<Vec<String>> = redis::pipe()
+        .zrange(point_prefix_key, 0_isize, 5000)
         .query_async(&mut rds_conn)
         .await
         .map_err(new_internal_error)?;
 
-    tracing::info!("total points: {:?}", total_ret);
-    let total_points = if total_ret.len() > 0 {
-        total_ret[0]
-            .as_ref()
-            .unwrap_or(&String::from("0"))
-            .parse()
-            .unwrap_or(0)
-    } else {
-        0
-    };
+    tracing::info!("points history: {:?}", points_ret);
+
+    let mut total_points = 0_u32;
+    if points_ret.len() > 0 && points_ret[0].len() > 0 {
+        tracing::info!("points history length: {:?}", points_ret[0].len());
+        for item in &points_ret[0] {
+            let parts: Vec<&str> = item.split('_').collect();
+            total_points += parts[1].parse::<u32>().unwrap();
+        }
+    }
+
+    // ============= 方案2： 从积分排行榜中获取 ===============
+    // let rank_prefix_key: String = String::from("pointsrank");
+    // let member_key = &req.address.to_lowercase();
+    // let total_ret: Vec<Option<String>> = redis::pipe()
+    //     .zscore(rank_prefix_key, member_key)
+    //     .query_async(&mut rds_conn)
+    //     .await
+    //     .map_err(new_internal_error)?;
+
+    // tracing::info!("total points: {:?}", total_ret);
+    // let total_points = if total_ret.len() > 0 {
+    //     total_ret[0]
+    //         .as_ref()
+    //         .unwrap_or(&String::from("0"))
+    //         .parse()
+    //         .unwrap_or(0)
+    // } else {
+    //     0
+    // };
+    //===============================================
 
     Ok(RespVO::from(&QueryAddressPointsResp {
         address: req.address,
@@ -159,7 +180,8 @@ pub async fn get_address_points_history(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryAddressPointsHistoryReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_token(headers, &app_state, req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
