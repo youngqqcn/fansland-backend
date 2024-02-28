@@ -145,6 +145,7 @@ pub async fn get_address_points(
             total_points += parts[1].parse::<u32>().unwrap();
         }
     }
+    tracing::info!("total points : {:?}", total_points);
 
     // ============= 方案2： 从积分排行榜中获取 ===============
     // let rank_prefix_key: String = String::from("pointsrank");
