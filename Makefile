@@ -46,3 +46,10 @@ stop:
 # redis-cli -a gooDluck4u -n 0  KEYS "nft:*" | xargs redis-cli -a gooDluck4u -n 0  DEL
 
 
+.PHONY:dep
+install_dep:
+	sudo apt install build-essential -y
+	sudo apt install pkg-config -y
+ 	sudo apt-get install libudev-dev -y
+	sudo apt install python3-pip -y
+
