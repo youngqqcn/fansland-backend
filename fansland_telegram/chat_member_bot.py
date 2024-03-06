@@ -40,18 +40,25 @@ logger = logging.getLogger(__name__)
 async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"update:{update}")
     new_members = update.message.new_chat_members
+    print(f'from_user是: {update.message.from_user}')
     print(f'new_members:{new_members}')
+    print(f'chat_member:{update.chat_member}')
+
+    # print(f'invite_link = {update.chat_member.invite_link.invite_link}')
     for member in new_members:
         user_id = member.id
         username = member.username
         first_name = member.first_name
         last_name = member.last_name
-        # 处理新加入的用户信息
-        print(f"New user joined: ID={user_id}, Username={username}, First Name={first_name}, Last Name={last_name}")
+        if member.is_bot:
+            # 如果是机器人
+            print(f"新机器人 joined: ID={user_id}, Username={username}, First Name={first_name}, Last Name={last_name}")
+        else:
+            # 处理新加入的用户信息
+            print(f"新用户 joined: ID={user_id}, Username={username}, First Name={first_name}, Last Name={last_name}")
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f'Hello {update.effective_user.first_name}')
-
 
 def main():
     """Start the bot."""
@@ -65,6 +72,7 @@ def main():
     application.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS, handle_new_member))
 
     application.add_handler(CommandHandler("hello", hello))
+    # application.add_handler(ChatMemberHandler(ChatMemberHandler.FILTER_INVITING, handle_invite_member))
 
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
