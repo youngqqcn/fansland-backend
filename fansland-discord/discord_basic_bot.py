@@ -133,7 +133,15 @@ async def invite(ctx):
     # global_invites[invite.url] = inviter.id  # 存储邀请者信息到字典中
     await ctx.send(f'Here is your invite link: {invite.url}')
 
+@bot.event
+async def on_message(message):
+    # we do not want the bot to reply to itself
+    if message.author.id == bot.user.id:
+        print('机器人自己的消息')
+        return
 
+    # if message.content.startswith('!hello'):
+    await message.reply('Hello!', mention_author=True)
 
 
 
