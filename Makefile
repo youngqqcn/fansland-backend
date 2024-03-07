@@ -32,6 +32,10 @@ start-nft-test:
 start-rank:
 	cargo run --bin fansland_points_rank -r > points_rank.log 2>&1 &
 
+start-migrate:
+	cargo run --bin fansland_points_migrate -r > migrate.log 2>&1 &
+
+
 start-email:
 	cd fansland_email_py && \
 	(nohup python3 -u fansland_email.py > ../email_output.log 2>&1 &) && \
