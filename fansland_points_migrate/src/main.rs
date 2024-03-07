@@ -1,6 +1,7 @@
 use chrono::{DateTime, Local, TimeZone, Utc};
 use ctrlc;
 use dotenv::dotenv;
+use rand::Rng;
 use redis::Client;
 use redis_pool::RedisPool;
 use sqlx::mysql::MySqlPoolOptions;
@@ -9,7 +10,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
 use tracing::Level;
 
@@ -73,6 +74,7 @@ async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
     let rds_client = Client::open(rds_url).unwrap();
     let redis_pool = RedisPool::from(rds_client);
     let mut rds_conn = redis_pool.aquire().await?;
+    let mut rng = rand::thread_rng();
 
     // mysql 数据库
     let pool = MySqlPoolOptions::new()
@@ -125,12 +127,18 @@ async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
                 let date_time = Utc.timestamp_opt(ts as i64, 0).unwrap();
                 let current_datetime: DateTime<Local> = Local::now();
 
+                let cur_timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("获取时间戳失败")
+                    .as_nanos()
+                    + rng.gen_range(10000..=99999);
+
                 let _ = sqlx::query!(
                     r#"
                         INSERT IGNORE INTO integral_request_record (id, app_id, request_type, hash, chain_id, address, create_time, update_time, amount )
                         VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?)
                                 "#,
-                    "evm_".to_owned()+&point_type.to_string() + "_" + &tx_hash[0..20],
+                    &cur_timestamp.to_string()[0..18],
                     "evm_migrate",
                     point_type,
                     tx_hash,
