@@ -127,18 +127,20 @@ async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
                 let date_time = Utc.timestamp_opt(ts as i64, 0).unwrap();
                 let current_datetime: DateTime<Local> = Local::now();
 
+                // 休眠一微妙，
+                sleep(Duration::from_micros(1)).await;
                 let cur_timestamp = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .expect("获取时间戳失败")
-                    .as_nanos()
-                    + rng.gen_range(10000..=99999);
+                    .as_micros().to_string() // 16位
+                    + &rng.gen_range(1111111..=9999999).to_string();
 
                 let _ = sqlx::query!(
                     r#"
                         INSERT IGNORE INTO integral_request_record (id, app_id, request_type, hash, chain_id, address, create_time, update_time, amount )
                         VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?)
                                 "#,
-                    &cur_timestamp.to_string()[0..18],
+                    &cur_timestamp[0..18],
                     "evm_migrate",
                     point_type,
                     tx_hash,
