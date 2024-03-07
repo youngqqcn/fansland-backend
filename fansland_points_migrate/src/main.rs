@@ -1,7 +1,10 @@
+use chrono::{DateTime, Local, TimeZone, Utc};
 use ctrlc;
 use dotenv::dotenv;
 use redis::Client;
 use redis_pool::RedisPool;
+use sqlx::mysql::MySqlPoolOptions;
+use std::env;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -11,7 +14,7 @@ use tokio::time::sleep;
 use tracing::Level;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
     // tracing_subscriber::registry()
@@ -64,12 +67,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // 更新积分排行榜
 async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
-    tracing::info!("更新积分排行榜");
+    tracing::info!("将EVM积分记录搞到mysql中,与任务积分合并");
     let rds_url = std::env::var("REDIS_URL").unwrap();
     tracing::debug!("rds_url: {}", rds_url);
     let rds_client = Client::open(rds_url).unwrap();
     let redis_pool = RedisPool::from(rds_client);
     let mut rds_conn = redis_pool.aquire().await?;
+
+    // mysql 数据库
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&env::var("DATABASE_URL")?)
+        .await?;
 
     // 使用redis
     let addresses_ret: Vec<Vec<String>> = redis::pipe()
@@ -98,24 +107,44 @@ async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
             })?;
 
         tracing::info!("points history: {:?}", points_ret);
+        let user_address: &str = point_prefix_key.split(':').nth(1).unwrap_or("");
 
         // let mut historys: Vec<Point> = Vec::new();
-        let mut total_points = 0_u64;
+        // let mut total_points = 0_u64;
         if points_ret.len() > 0 && points_ret[0].len() > 0 {
             tracing::info!("points history length: {:?}", points_ret[0].len());
             for item in &points_ret[0] {
                 let parts: Vec<&str> = item.split('_').collect();
-                total_points += parts[1].parse::<u64>().unwrap();
+                // total_points += parts[1].parse::<u64>().unwrap();
+                let point_type = parts[2].parse::<u32>().unwrap();
+                let tx_hash = parts[4];
+                let chain_id = parts[0]; // 如果chainid过大，则需要修改数据库结构
+                let points_amount = parts[1].parse::<u64>().unwrap();
+
+                let ts = parts[3].parse::<u64>().unwrap();
+                let date_time = Utc.timestamp_opt(ts as i64, 0).unwrap();
+                let current_datetime: DateTime<Local> = Local::now();
+
+                let _ = sqlx::query!(
+                    r#"
+                        INSERT IGNORE INTO integral_request_record (id, app_id, request_type, hash, chain_id, address, create_time, update_time, amount )
+                        VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?)
+                                "#,
+                    "evm_".to_owned()+&point_type.to_string() + "_" + &tx_hash[0..20],
+                    "evm_migrate",
+                    point_type,
+                    tx_hash,
+                    chain_id,
+                    user_address,
+                    date_time.to_rfc3339(),
+                    current_datetime.to_rfc3339(),
+                    points_amount,
+                )
+                .execute(&pool)
+                .await?
+                .rows_affected();
             }
         }
-
-        // 更新排行榜积分  ZADD key score1 member
-        let address: &str = point_prefix_key.split(':').nth(1).unwrap_or("");
-        let rank_prefix_key: String = String::from("pointsrank");
-        let _: () = redis::pipe()
-            .zadd(rank_prefix_key, &address.to_lowercase(), total_points)
-            .query_async(&mut rds_conn)
-            .await?;
     }
 
     Ok(())
