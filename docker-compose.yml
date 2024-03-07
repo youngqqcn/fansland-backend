@@ -9,12 +9,12 @@ services:
       TZ: Asia/Shanghai
       # root 密码 - root password
       MYSQL_USER: root
-      MYSQL_DATABASE: fansland
+      MYSQL_DATABASE: fansland_sol
       MYSQL_ROOT_HOST: '%'
       # MYSQL_ROOT_HOST: '172.20.0.1'
-      MYSQL_ROOT_PASSWORD: PXDN93VRKUm8TeE7
+      MYSQL_ROOT_PASSWORD: ae633jmFLiAGqigSO41
     ports:
-      - 33306:3306
+      - 3307:3306
     volumes:
       # 数据挂载 - Data mounting
       - ./data/mysql/data:/var/lib/mysql
