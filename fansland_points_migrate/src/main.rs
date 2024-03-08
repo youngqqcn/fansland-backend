@@ -137,11 +137,12 @@ async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
 
                 let _ = sqlx::query!(
                     r#"
-                        INSERT IGNORE INTO integral_request_record (id, app_id, request_type, hash, chain_id, address, create_time, update_time, amount )
-                        VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?)
+                        INSERT IGNORE INTO integral_request_record (id, app_id, biz_id, request_type, hash, chain_id, address, create_time, update_time, amount )
+                        VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?, ?)
                                 "#,
                     &cur_timestamp[0..18],
                     "evm_migrate",
+                    point_type.to_string() + "_" + &tx_hash[0..25],
                     point_type,
                     tx_hash,
                     chain_id,
