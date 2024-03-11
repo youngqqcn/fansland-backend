@@ -14,7 +14,7 @@ services:
       # MYSQL_ROOT_HOST: '172.20.0.1'
       MYSQL_ROOT_PASSWORD: ae633jmFLiAGqigSO41
     ports:
-      - 3307:3306
+      - 3306:3306
     volumes:
       # 数据挂载 - Data mounting
       - ./data/mysql/data:/var/lib/mysql
