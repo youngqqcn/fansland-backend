@@ -89,7 +89,7 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
                 </li>
                 <li>
                     <p style="font-size:14px;    line-height:170%;   margin:0;color:black;">
-                     💾 Check-in QR Code: QR Code is bound to the NFT holding address, transferring NFT to others will cause the QR Code to be invalid.<span style="font-weight: 600;"> </span>
+                     💾 Check-in QR Code: This QR Code is bound to the NFT holding address, transferring NFT to others will cause the QR Code to be invalid.<span style="font-weight: 600;"> </span>
                     </p>
                 </li>
             </ul>
