@@ -12,7 +12,7 @@ def main():
     chainid_maps = {
         # 主网
         '137': 'Polygon PoS',
-        '56': 'BNB Chain',
+        '56': 'BNB Smart Chain',
         '1': 'Ethereum',
         '42161': 'Arbitrum One',
         '10': 'OP Mainnet',
@@ -42,7 +42,7 @@ def main():
 
     # TODO: 修改成正式的票名
     typeid_maps = {
-        '0': "Early Bird 2-Days Ticket",
+        '0': "Early Bird 2 Days Ticket",
         # '1': "Fansland Type 1",
         # '2': "Fansland Type 2",
     }
