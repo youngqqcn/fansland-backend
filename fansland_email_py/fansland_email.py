@@ -43,7 +43,7 @@ def main():
     # TODO: 修改成正式的票名
     typeid_maps = {
         '0': "Early Bird 2 Days Ticket",
-        # '1': "Fansland Type 1",
+        '1': "Fansland Type 1",
         # '2': "Fansland Type 2",
     }
 
