@@ -120,7 +120,7 @@ def get_mint_template(chain, chainid, address, ticket_type, token_id) :
               <img style="width: 180px;" src="https://static.fansland.io/email/fansland.png" />
             </p>
             <p style="text-align: center; font-size:13px;  line-height:100%;  color:black;">
-              Build The Best Web3 Infrastructure for Global FANS
+              Build the Best Web3 + AI Infrastructure for Global FANS
             </p>
             <p style="text-align: center;">
               <a style="margin:0;text-decoration: none;" href="https://medium.com/@fansland" target="_blank">
