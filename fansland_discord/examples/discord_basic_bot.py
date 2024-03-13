@@ -101,37 +101,37 @@ def find_invite_by_code( inv_list, code):
 
 @bot.event
 async def on_member_join(member):
-    invs_before = global_invites[member.guild.id]
-    print(f"invs_before: {invs_before}")
-    print('=====================')
-    invs_after = await member.guild.invites()
-    print(f"invs_after: {invs_after}")
-    print('=====================')
-    global_invites[member.guild.id] = invs_after
-    for invite in invs_before:
-        # 通过对比 uses 来记录邀请成功的人数
-        # 参考： https://github.com/GregTCLTK/Discord-Invite-Tracker/blob/7b3f397e26d1953fe3609e5bd72dcfe7849b799f/invite_tracker.py#L58
-        tmp_inv = find_invite_by_code(invs_after, invite.code)
-        if invite.uses < tmp_inv.uses:
-            print(f"Inviter: {invite.inviter.mention} (`{invite.inviter}` | `{str(invite.inviter.id)}`)\nCode: `{invite.code}`\nUses: ` {str(tmp_inv.uses)} `")
-            pass
 
+    # 记录邀请(如果有的话)
+    if True:
+        invs_before = global_invites[member.guild.id]
+        print(f"invs_before: {invs_before}")
+        print('=====================')
+        invs_after = await member.guild.invites()
+        print(f"invs_after: {invs_after}")
+        print('=====================')
+        global_invites[member.guild.id] = invs_after
+        for invite in invs_before:
+            # 通过对比 uses 来记录邀请成功的人数
+            # 参考： https://github.com/GregTCLTK/Discord-Invite-Tracker/blob/7b3f397e26d1953fe3609e5bd72dcfe7849b799f/invite_tracker.py#L58
+            tmp_inv = find_invite_by_code(invs_after, invite.code)
+            if invite.uses < tmp_inv.uses:
+                print(f"Inviter: {invite.inviter.mention} (`{invite.inviter}` | `{str(invite.inviter.id)}`)\nCode: `{invite.code}`\nUses: ` {str(tmp_inv.uses)} `")
+                pass
+    # 记录加入
+    print(f"Inviter: {invite.inviter.mention} (`{invite.inviter}` | `{str(invite.inviter.id)}`)\nCode: `{invite.code}`\nUses: ` {str(tmp_inv.uses)} `")
 
-
-#TODO: on_invite_create
-
-@bot.command()
-async def invite(ctx):
-    inviter = ctx.author
-    print(inviter)
-    print(inviter.id)
-    invite = await ctx.channel.create_invite()
-    invs_after = await ctx.author.guild.invites()
-    global_invites[ctx.author.guild.id] = invs_after
-    print_invites(invs_after)
-
-    # global_invites[invite.url] = inviter.id  # 存储邀请者信息到字典中
-    await ctx.send(f'Here is your invite link: {invite.url}')
+# @bot.command()
+# async def invite(ctx):
+#     inviter = ctx.author
+#     print(inviter)
+#     print(inviter.id)
+#     invite = await ctx.channel.create_invite()
+#     invs_after = await ctx.author.guild.invites()
+#     global_invites[ctx.author.guild.id] = invs_after
+#     print_invites(invs_after)
+#     # global_invites[invite.url] = inviter.id  # 存储邀请者信息到字典中
+#     await ctx.send(f'Here is your invite link: {invite.url}')
 
 @bot.event
 async def on_message(message):
@@ -140,7 +140,7 @@ async def on_message(message):
         print('机器人自己的消息')
         return
 
-    # if message.content.startswith('!hello'):
+    # 需求点: 记录用户发消息的次数
     await message.reply('Hello!', mention_author=True)
 
 
