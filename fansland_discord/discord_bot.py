@@ -23,87 +23,146 @@ class DiscordBotClient(discord.Client):
 
     async def setup_hook(self) -> None:
         # start the task to run in the background
-        self.invite_link_uses_task.start()
+        # self.invite_link_uses_task.start()
         self.update_all_members_task.start()
+        pass
 
     def __print_invites(self, invts):
         for invt in invts:
             logging.debug(f'code:{invt.code},uses:{invt.uses},inviter_id:{invt.inviter.id},inviter:{invt.inviter},{invt.inviter.mention}')
 
     async def on_ready(self):
-        logging.info(f'Logged in as {self.user} (ID: {self.user.id})')
-        logging.info('------')
-        for guild in self.guilds:
-            invts = await guild.invites()
-            self.global_invites[guild.id] = invts
-            self.__print_invites(invts=invts)
+        try:
+            logging.info(f'Logged in as {self.user} (ID: {self.user.id})')
+            logging.info('------')
+            for guild in self.guilds:
+                invts = await guild.invites()
+                self.global_invites[guild.id] = invts
+                self.__print_invites(invts=invts)
+        except Exception as e:
+            logging.error(e)
 
 
-    @tasks.loop(seconds=5)
-    async def invite_link_uses_task(self):
-        logging.info("=====更新邀请次数定时任务启动=======")
-        for guild in self.guilds:
-            invites = await guild.invites()
-            # self.global_invites[guild.id] = invts
-            self.__print_invites(invts=invites)
-            for inv in invites:
-                if inv.uses > 0:
-                    logging.debug(f'{inv} uses is {inv.uses}')
-                    # TODO: 插入redis / 数据库
-        logging.info("=====更新邀请次数定时任务结束=======")
-        pass
+    # async def update_invite_count(self):
+    #     logging.info("=====更新邀请次数定时任务启动=======")
+    #     for guild in self.guilds:
+    #         invites = await guild.invites()
+    #         # self.global_invites[guild.id] = invts
+    #         self.__print_invites(invts=invites)
+    #         for inv in invites:
+    #             if inv.uses > 0:
+    #                 logging.debug(f'{inv} uses is {inv.uses}')
+    #                 # 插入redis / 数据库
+    #                 fmt_key = "gm:invitelinkuses:{}".format(str(inv.inviter.id))
+    #                 self.rds.set(fmt_key, inv.uses)
+    #     logging.info("=====更新邀请次数定时任务结束=======")
+    #     pass
 
-    @tasks.loop(seconds=5)
+    # @invite_link_uses_task.before_loop
+    # async def before_invite_link_uses_task(self):
+        # await self.wait_until_ready()
+
+    @tasks.loop(seconds=10)
     async def update_all_members_task(self):
-        logging.info("=====更新群成员定时任务启动=======")
-        i = 0
-        for member in super().get_all_members():
-            logging.debug(f'成员{i}: {member}')
-            i += 1
-            # 向redis集合添加成员
-            self.rds.sadd("discordmembers", str(member.id))
-            pass
-        logging.info("=====更新群成员定时任务结束=======")
+        try:
+            logging.info("=====更新群成员定时任务启动=======")
+            for member in super().get_all_members():
+                # logging.debug(f'成员{i}: {member}')
+                # 向redis集合添加成员
+                self.rds.sadd("gm:discordmembers", str(member.id))
+                pass
+            logging.info("=====更新群成员定时任务结束=======")
+        except Exception as e:
+            logging.error(e)
+
 
     @update_all_members_task.before_loop
     async def before_task(self):
         await self.wait_until_ready()
 
-    @invite_link_uses_task.before_loop
-    async def before_invite_link_uses_task(self):
-        await self.wait_until_ready()
 
-    # async def on_member_join(self, member):
-    #     """用户加入事件 """
-    #     guild = member.guild
-    #     if guild.system_channel is not None:
-    #         to_send = f'Welcome {member.mention} to {guild.name}!'
-    #         await guild.system_channel.send(to_send)
+    def __find_invite_by_code(self, inv_list, code):
+        for inv in inv_list:
+            if inv.code == code:
+                return inv
+        return None
+
+    async def on_member_join(self, member: discord.Member):
+        """用户加入事件 """
+        try:
+            logging.info("用户:{member.id} 加入")
+            invs_before = self.global_invites[member.guild.id]
+            logging.debug(f"invs_before: {invs_before}")
+            logging.debug('=====================')
+            invs_after = await member.guild.invites()
+            logging.debug(f"invs_after: {invs_after}")
+            logging.debug('=====================')
+            self.global_invites[member.guild.id] = invs_after
+
+            # 判断这个用户之前有没有加入过，
+            records_key = "gm:discordinviterecords"
+            ret = self.rds.sismember(records_key, str(member.id))
+            if str(ret) == '1':
+                logging.info(f"此用户:{member.id} 以前加入过，不再计算邀请次数")
+                return
+
+            # 如果是新用户，则计算邀请次数
+            for new_invite in invs_after:
+                # 通过对比 uses 来记录邀请成功的人数
+                # 参考： https://github.com/GregTCLTK/Discord-Invite-Tracker/blob/7b3f397e26d1953fe3609e5bd72dcfe7849b799f/invite_tracker.py#L58
+                # 在最新的集合中找
+                is_new_invite = False
+                ret_invt = self.__find_invite_by_code(invs_before, new_invite.code)
+                if ret_invt == None:
+                    if new_invite.uses() == 1:
+                        # 第一个邀请
+                        is_new_invite = True
+                elif ret_invt.uses < new_invite.uses :
+                    logging.info(f"Inviter: {ret_invt.inviter.mention} (`{ret_invt.inviter}` | `{str(ret_invt.inviter.id)}`)\nCode: `{ret_invt.code}`\nUses: ` {str(new_invite.uses)} `")
+                    is_new_invite = True
+                    pass
+                if is_new_invite:
+                    # 是新的邀请, 将被邀请的做个记录，防止重复退出有加入，重复刷
+                    self.rds.sadd(records_key, str(member.id))
+                    # 邀请计数新增1
+                    self.rds.incr("gm:dicordsinvitecounter:{}".format(new_invite.inviter.id))
+
+                    # 找到邀请人就结束
+                    return
+
+            logging.info("用户:{member.id}未找邀请人")
+        except Exception as e:
+            logging.error(e)
+        pass
 
     async def on_message(self, message):
         """监听消息"""
 
-        if message.author.id == self.user.id:
-            logging.debug('机器人自己的消息')
-            return
+        try:
+            if message.author.id == self.user.id:
+                logging.debug('机器人自己的消息')
+                return
 
-        # 需求点: 记录用户发消息的次数
-        logging.debug(f'新消息, 消息发送者的id: {message.author.id}')
-        # 使用 incr 增加 redis的计数器:
-        # key的格式   gm:channel:渠道:日期:账户id
-        #       渠道(discord、telegram)
-        #       日期(2024-03-13)
-        #       账户ID （1111111111111）
-        # value: 发送消息的次数
-        date = datetime.datetime.now().strftime("%Y-%m-%d")
-        fmt_key = "gm:channel:{}:{}:{}".format("discord", date, message.author.id)
-        ret = self.rds.incr(fmt_key)
-        logging.info(f"ret:{ret}")
+            # 需求点: 记录用户发消息的次数
+            logging.debug(f'新消息, 消息发送者的id: {message.author.id}')
+            # 使用 incr 增加 redis的计数器:
+            # key的格式   gm:channel:渠道:日期:账户id
+            #       渠道(discord、telegram)
+            #       日期(2024-03-13)
+            #       账户ID （1111111111111）
+            # value: 发送消息的次数
+            date = datetime.datetime.now().strftime("%Y-%m-%d")
+            fmt_key = "gm:channel:{}:{}:{}".format("discord", date, message.author.id)
+            ret = self.rds.incr(fmt_key)
+            logging.info(f"ret:{ret}")
 
-        # 暂不设置过期时间
-        # if -1 == self.rds.ttl(fmt_key):
-        #     ret = self.rds.expire(fmt_key, 24*60*60 + 1)
-        #     logging.info(f"ret:{ret}")
+            # 暂不设置过期时间
+            # if -1 == self.rds.ttl(fmt_key):
+            #     ret = self.rds.expire(fmt_key, 24*60*60 + 1)
+            #     logging.info(f"ret:{ret}")
+        except Exception as e:
+            logging.error(e)
+            pass
         pass
 
 

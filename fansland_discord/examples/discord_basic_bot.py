@@ -118,8 +118,8 @@ async def on_member_join(member):
             if invite.uses < tmp_inv.uses:
                 print(f"Inviter: {invite.inviter.mention} (`{invite.inviter}` | `{str(invite.inviter.id)}`)\nCode: `{invite.code}`\nUses: ` {str(tmp_inv.uses)} `")
                 pass
-    # 记录加入
-    print(f"Inviter: {invite.inviter.mention} (`{invite.inviter}` | `{str(invite.inviter.id)}`)\nCode: `{invite.code}`\nUses: ` {str(tmp_inv.uses)} `")
+            # 记录加入
+            print(f"Inviter: {invite.inviter.mention} (`{invite.inviter}` | `{str(invite.inviter.id)}`)\nCode: `{invite.code}`\nUses: ` {str(tmp_inv.uses)} `")
 
 # @bot.command()
 # async def invite(ctx):
