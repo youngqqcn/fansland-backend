@@ -3,6 +3,7 @@
 # date: 2024-03-13
 # description: dicord任务机器人
 
+import datetime
 import logging
 from typing import Generator
 import discord
@@ -10,10 +11,12 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 import sys
 import os
+import redis
 
 class DiscordBotClient(discord.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.rds = redis.Redis(host='localhost', port=6379, db=0, password='gooDluck4u')
 
         # an attribute we can access from our task
         self.global_invites = {}
@@ -57,7 +60,8 @@ class DiscordBotClient(discord.Client):
         for member in super().get_all_members():
             logging.debug(f'成员{i}: {member}')
             i += 1
-            # TODO 更新redis
+            # 向redis集合添加成员
+            self.rds.sadd("discordmembers", str(member.id))
             pass
         logging.info("=====更新群成员定时任务结束=======")
 
@@ -85,12 +89,21 @@ class DiscordBotClient(discord.Client):
 
         # 需求点: 记录用户发消息的次数
         logging.debug(f'新消息, 消息发送者的id: {message.author.id}')
-        # TODO: 使用 incr 增加 redis的计数器:
+        # 使用 incr 增加 redis的计数器:
         # key的格式   gm:channel:渠道:日期:账户id
         #       渠道(discord、telegram)
         #       日期(2024-03-13)
         #       账户ID （1111111111111）
         # value: 发送消息的次数
+        date = datetime.datetime.now().strftime("%Y-%m-%d")
+        fmt_key = "gm:channel:{}:{}:{}".format("discord", date, message.author.id)
+        ret = self.rds.incr(fmt_key)
+        logging.info(f"ret:{ret}")
+
+        # 暂不设置过期时间
+        # if -1 == self.rds.ttl(fmt_key):
+        #     ret = self.rds.expire(fmt_key, 24*60*60 + 1)
+        #     logging.info(f"ret:{ret}")
         pass
 
 
