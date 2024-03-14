@@ -43,7 +43,7 @@ start-email:
 
 start-discord-bot:
 	cd fansland_discord && \
-	(nohup python3 -u discord_bot.py TEST_BOT_TOKEN > discord_output.log 2>&1 &) && \
+	(nohup python3 -u fansland_discord_bot.py TEST_BOT_TOKEN > ../discord_output.log 2>&1 &) && \
 	cd ..
 
 
