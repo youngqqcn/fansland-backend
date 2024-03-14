@@ -41,6 +41,12 @@ start-email:
 	(nohup python3 -u fansland_email.py > ../email_output.log 2>&1 &) && \
 	cd ..
 
+start-discort-bot:
+	cd fansland_discord && \
+	(nohup python3 -u discord_bot.py TEST_BOT_TOKEN > discord_output.log 2>&1 &) && \
+	cd ..
+
+
 stop:
 	ps aux | grep fansland | grep -v grep | awk '{print $$2}' | xargs kill
 
