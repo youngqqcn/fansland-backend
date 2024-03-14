@@ -115,7 +115,7 @@ class DiscordBotClient(discord.Client):
                 is_new_invite = False
                 ret_invt = self.__find_invite_by_code(invs_before, new_invite.code)
                 if ret_invt == None:
-                    if new_invite.uses() == 1:
+                    if new_invite.uses == 1:
                         # 第一个邀请
                         is_new_invite = True
                 elif ret_invt.uses < new_invite.uses :
