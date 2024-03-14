@@ -93,10 +93,10 @@ class DiscordBotClient(discord.Client):
         try:
             logging.info(f"用户:{member.id} 加入")
             invs_before = self.global_invites[member.guild.id]
-            logging.debug(f"invs_before: {invs_before}")
+            logging.debug(f"invs_before: {len(invs_before)}")
             logging.debug('=====================')
             invs_after = await member.guild.invites()
-            logging.debug(f"invs_after: {invs_after}")
+            logging.debug(f"invs_after: {len(invs_after)}")
             logging.debug('=====================')
             self.global_invites[member.guild.id] = invs_after
 
