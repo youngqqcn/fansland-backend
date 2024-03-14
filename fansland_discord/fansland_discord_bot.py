@@ -137,7 +137,7 @@ class DiscordBotClient(discord.Client):
             logging.error(e)
         pass
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         """监听消息"""
 
         try:
@@ -145,8 +145,15 @@ class DiscordBotClient(discord.Client):
                 logging.debug('机器人自己的消息')
                 return
 
+            if not message.content.startswith('#fansland'):
+                # logging.info(message.content)
+                logging.debug("消息不是#fansland开头")
+                return
+
+
+
             # 需求点: 记录用户发消息的次数
-            logging.debug(f'新消息, 消息发送者的id: {message.author.id}')
+            logging.debug(f'合格的新消息, 消息发送者的id: {message.author.id}')
             # 使用 incr 增加 redis的计数器:
             # key的格式   gm:channel:渠道:日期:账户id
             #       渠道(discord、telegram)
@@ -174,8 +181,9 @@ def main():
                     format='%(asctime)s.%(msecs)03d %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 
-    intents = discord.Intents.default()
+    intents = discord.Intents.all()
     intents.members = True
+    intents.messages = True
     client = DiscordBotClient(intents=intents)
 
     # 从命令行获取参数名
