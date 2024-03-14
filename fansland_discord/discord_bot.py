@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import sys
 import os
 import redis
+import traceback
 
 class DiscordBotClient(discord.Client):
     def __init__(self, *args, **kwargs):
@@ -69,7 +70,7 @@ class DiscordBotClient(discord.Client):
             for member in super().get_all_members():
                 # logging.debug(f'成员{i}: {member}')
                 # 向redis集合添加成员
-                self.rds.sadd("gm:discordmembers", str(member.id))
+                self.rds.sadd("gm:discord:members", str(member.id))
                 pass
             logging.info("=====更新群成员定时任务结束=======")
         except Exception as e:
@@ -90,7 +91,7 @@ class DiscordBotClient(discord.Client):
     async def on_member_join(self, member: discord.Member):
         """用户加入事件 """
         try:
-            logging.info("用户:{member.id} 加入")
+            logging.info(f"用户:{member.id} 加入")
             invs_before = self.global_invites[member.guild.id]
             logging.debug(f"invs_before: {invs_before}")
             logging.debug('=====================')
@@ -100,7 +101,7 @@ class DiscordBotClient(discord.Client):
             self.global_invites[member.guild.id] = invs_after
 
             # 判断这个用户之前有没有加入过，
-            records_key = "gm:discordinviterecords"
+            records_key = "gm:discord:inviterecords"
             ret = self.rds.sismember(records_key, str(member.id))
             if str(ret) == '1':
                 logging.info(f"此用户:{member.id} 以前加入过，不再计算邀请次数")
@@ -125,13 +126,14 @@ class DiscordBotClient(discord.Client):
                     # 是新的邀请, 将被邀请的做个记录，防止重复退出有加入，重复刷
                     self.rds.sadd(records_key, str(member.id))
                     # 邀请计数新增1
-                    self.rds.incr("gm:dicordsinvitecounter:{}".format(new_invite.inviter.id))
+                    self.rds.incr("gm:dicords:invitecounter:{}".format(new_invite.inviter.id))
 
                     # 找到邀请人就结束
                     return
 
             logging.info("用户:{member.id}未找邀请人")
         except Exception as e:
+            traceback.print_exc(e)
             logging.error(e)
         pass
 

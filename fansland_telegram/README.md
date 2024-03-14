@@ -12,6 +12,3 @@
 - https://core.telegram.org/bots/api#chatmemberupdated
 
 ## 监听消息()：
-
-## 邀请链接：
-- https://core.telegram.org/bots/api#createchatinvitelink
