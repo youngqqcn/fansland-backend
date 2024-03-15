@@ -43,7 +43,17 @@ start-email:
 
 start-discord-bot:
 	cd fansland_discord && \
-	(nohup python3 -u fansland_discord_bot.py TEST_BOT_TOKEN > ../discord_output.log 2>&1 &) && \
+	(nohup python3 -u fansland_discord_bot.py TEST_BOT_TOKEN > ../discord_bot_output.log 2>&1 &) && \
+	cd ..
+
+start-telegram-test-bot:
+	cd fansland_discord && \
+	(nohup python3 -u fansland_telegram_bot.py TEST_CHATID > ../telegram_bot_output.log 2>&1 &) && \
+	cd ..
+
+start-telegram-pro-bot:
+	cd fansland_discord && \
+	(nohup python3 -u fansland_telegram_bot.py PRO_CHATID > ../telegram_bot_output.log 2>&1 &) && \
 	cd ..
 
 
