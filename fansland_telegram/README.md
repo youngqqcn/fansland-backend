@@ -1,6 +1,11 @@
+# python-telegram-bot 示例：
+-  https://github.com/python-telegram-bot/python-telegram-bot/blob/master/examples/echobot.py
+
+
 ## oauth
 
 - https://core.telegram.org/widgets/login
+- https://github.com/wewall/ss-panel-wiki/blob/ago/Telegram-OAuth-%E9%85%8D%E7%BD%AE.md
 
 ## 创建telegram bot api token:
 - https://www.siteguarding.com/en/how-to-get-telegram-bot-api-token
