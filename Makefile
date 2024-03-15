@@ -47,12 +47,12 @@ start-discord-bot:
 	cd ..
 
 start-telegram-test-bot:
-	cd fansland_discord && \
+	cd fansland_telegram && \
 	(nohup python3 -u fansland_telegram_bot.py TEST_CHATID > ../telegram_bot_output.log 2>&1 &) && \
 	cd ..
 
 start-telegram-pro-bot:
-	cd fansland_discord && \
+	cd fansland_telegram && \
 	(nohup python3 -u fansland_telegram_bot.py PRO_CHATID > ../telegram_bot_output.log 2>&1 &) && \
 	cd ..
 
