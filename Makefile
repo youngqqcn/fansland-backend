@@ -48,12 +48,12 @@ start-discord-bot:
 
 start-telegram-test-bot:
 	cd fansland_telegram && \
-	(nohup python3 -u fansland_telegram_bot.py TEST_CHATID > ../telegram_bot_output.log 2>&1 &) && \
+	(nohup python3 -u fansland_telegram_bot.py TEST_CHATID TEST_TG_BOT_TOKEN > ../telegram_bot_output.log 2>&1 &) && \
 	cd ..
 
 start-telegram-pro-bot:
 	cd fansland_telegram && \
-	(nohup python3 -u fansland_telegram_bot.py PRO_CHATID > ../telegram_bot_output.log 2>&1 &) && \
+	(nohup python3 -u fansland_telegram_bot.py PRO_CHATID PRO_TG_BOT_TOKEN  > ../telegram_bot_output.log 2>&1 &) && \
 	cd ..
 
 

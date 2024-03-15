@@ -59,7 +59,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 def main() -> None:
     load_dotenv()
     chat_id = os.getenv( str(sys.argv[1]).strip() )
-    token = os.getenv("TG_BOT_TOKEN")
+    token = os.getenv(str(sys.argv[2]).strip())
 
 
     logging.basicConfig(level=logging.INFO,
