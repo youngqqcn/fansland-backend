@@ -145,12 +145,10 @@ class DiscordBotClient(discord.Client):
                 logging.debug('机器人自己的消息')
                 return
 
-            if not message.content.startswith('#fansland'):
-                # logging.info(message.content)
-                logging.debug("消息不是#fansland开头")
+            msg_text = message.content
+            if "#fansland" not in msg_text.lower():
+                logging.info("消息格式不符")
                 return
-
-
 
             # 需求点: 记录用户发消息的次数
             logging.debug(f'合格的新消息, 消息发送者的id: {message.author.id}')
