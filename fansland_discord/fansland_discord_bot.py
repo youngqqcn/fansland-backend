@@ -44,6 +44,22 @@ class DiscordBotClient(discord.Client):
             logging.error(e)
 
 
+    def __get_start_of_week(self):
+        # 获取当前日期
+        today = datetime.date.today()
+
+        # 获取当前是第几周
+        week_number = today.isocalendar()[1]
+
+        # 获取当前星期几（0表示星期一，6表示星期日）
+        weekday = today.weekday()
+
+        # 获取本周的第一天日期
+        start_of_week = today - datetime.timedelta(days=today.weekday())
+
+        return start_of_week.strftime("%Y-%m-%d")
+
+
     # async def update_invite_count(self):
     #     logging.info("=====更新邀请次数定时任务启动=======")
     #     for guild in self.guilds:
@@ -126,7 +142,7 @@ class DiscordBotClient(discord.Client):
                     # 是新的邀请, 将被邀请的做个记录，防止重复退出有加入，重复刷
                     self.rds.sadd(records_key, str(member.id))
                     # 邀请计数新增1
-                    self.rds.incr("gm:dicords:invitecounter:{}".format(new_invite.inviter.id))
+                    self.rds.incr("gm:dicords:invitecounter:{}:{}".format(new_invite.inviter.id, self.__get_start_of_week()))
 
                     # 找到邀请人就结束
                     return
