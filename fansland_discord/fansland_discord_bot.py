@@ -142,7 +142,7 @@ class DiscordBotClient(discord.Client):
                     # 是新的邀请, 将被邀请的做个记录，防止重复退出有加入，重复刷
                     self.rds.sadd(records_key, str(member.id))
                     # 邀请计数新增1
-                    self.rds.incr("gm:dicords:invitecounter:{}:{}".format(new_invite.inviter.id, self.__get_start_of_week()))
+                    self.rds.incr("gm:discord:invitecounter:{}:{}".format(new_invite.inviter.id, self.__get_start_of_week()))
 
                     # 找到邀请人就结束
                     return
