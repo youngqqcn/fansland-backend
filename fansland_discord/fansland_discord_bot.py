@@ -163,7 +163,7 @@ class DiscordBotClient(discord.Client):
 
             msg_text = message.content
             if "#fansland" not in msg_text.lower():
-                logging.info("消息格式不符")
+                logging.info(f"消息格式不符,消息发送者的id:  {message.author.id}")
                 return
 
             # 需求点: 记录用户发消息的次数
