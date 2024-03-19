@@ -6,6 +6,8 @@ import requests
 
 def main():
     SALT = "ca17a3e225a85a74290831f504aceec5"
+    OPEN_URL = 'https://fansland.io/openapi-ok/v1/getQRCode'
+    # OPEN_URL = 'http://127.0.0.1:3034/getQRCode'
 
     req = {
         "chain_id":1,
@@ -39,13 +41,16 @@ def main():
     # 设置签名
     req["signature"] = sig
 
+
     # 请求接口
-    resp = requests.get(
-        url="http://127.0.0.1:3034/getQRCode",
+    resp = requests.post(
+        url=OPEN_URL,
         json=req,
         headers={
-        "Content-Type": "application/json"
-    })
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    },)
+    print(resp.text)
 
     # 响应结果
     pprint(resp.json())

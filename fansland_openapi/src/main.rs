@@ -1,6 +1,6 @@
 use axum::{
     http::{StatusCode, Uri},
-    routing::get,
+    routing::post,
     Json, Router,
 };
 use fansland_common::RespVO;
@@ -24,7 +24,7 @@ async fn main() {
         .init();
 
     // build our application with some routes
-    let need_auth_routers = Router::new().route("/getQRCode", get(get_nft_ticket_qrcode));
+    let need_auth_routers = Router::new().route("/getQRCode", post(get_nft_ticket_qrcode));
 
     let app_routers = need_auth_routers.fallback(fallback);
 
