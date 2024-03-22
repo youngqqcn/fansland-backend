@@ -21,3 +21,5 @@ fansland_email/qrcode.png
 *.png
 
 *.log
+
+node_modules
