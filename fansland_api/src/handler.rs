@@ -539,6 +539,7 @@ pub async fn query_ticket_qrcode_by_token_id(
     // 根据算法生成二维码
     let mut fansland_nft_contract_address =
         std::env::var(format!("FANSLAND_NFT_{}", chainid)).unwrap();
+    fansland_nft_contract_address = fansland_nft_contract_address.to_lowercase();
     // FIX: for fix , 之前BSC早鸟票使用了大写, 使用这种方式修补, 2024-3-25 by yqq
     if fansland_nft_contract_address.to_lowercase() == "0xbf36ab3aed81bf8553b52c61041904d98ee882c2"
     {

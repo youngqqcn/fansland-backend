@@ -6,8 +6,8 @@ import requests
 
 def main():
     SALT = "ca17a3e225a85a74290831f504aceec5"
-    # OPEN_URL = 'https://fansland.io/openapi-ok/v1/getQRCode'
-    OPEN_URL = 'http://127.0.0.1:3034/getQRCode'
+    OPEN_URL = 'https://fansland.io/openapi-ok/v1/getQRCode'
+    # OPEN_URL = 'http://127.0.0.1:3034/getQRCode'
 
     req = {
         "chain_id":56,
