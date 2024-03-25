@@ -334,12 +334,20 @@ async fn update_token_id_owner(
 
 fn gen_qrcode_text(chainid: u64, token_id: u64, token_id_owner: String) -> String {
     // 根据算法生成二维码
-    let fansland_nft_contract_address = std::env::var(format!("FANSLAND_NFT_{}", chainid)).unwrap();
+    let mut fansland_nft_contract_address =
+        std::env::var(format!("FANSLAND_NFT_{}", chainid)).unwrap();
     let salt = "QrCode@fansland.io2024-888"; // TODO:
+
+    // FIX: for fix , 之前BSC早鸟票使用了大写, 使用这种方式修补, 2024-3-25 by yqq
+    if fansland_nft_contract_address.to_lowercase() == "0xbf36ab3aed81bf8553b52c61041904d98ee882c2"
+    {
+        fansland_nft_contract_address = String::from("0xBf36aB3AeD81Bf8553B52c61041904d98Ee882C2");
+    }
+
     let hash_msg = String::new()
         + &fansland_nft_contract_address
         + &token_id.to_string()
-        + &token_id_owner
+        + &token_id_owner.to_lowercase()
         + &chainid.to_string()
         + salt;
     let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());

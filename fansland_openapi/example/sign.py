@@ -6,14 +6,14 @@ import requests
 
 def main():
     SALT = "ca17a3e225a85a74290831f504aceec5"
-    OPEN_URL = 'https://fansland.io/openapi-ok/v1/getQRCode'
-    # OPEN_URL = 'http://127.0.0.1:3034/getQRCode'
+    # OPEN_URL = 'https://fansland.io/openapi-ok/v1/getQRCode'
+    OPEN_URL = 'http://127.0.0.1:3034/getQRCode'
 
     req = {
-        "chain_id":1,
-        "nft_contract":"0xE9AE3261a475a27Bb1028f140bc2a7c843318afD",
-        "nft_owner":"0xF4435c244A292a8E8D56767bf6DF9b9c4D59aEED",
-        "nft_token_id":66,
+        "chain_id":56,
+        "nft_contract":"0xBf36aB3AeD81Bf8553B52c61041904d98Ee882C2",
+        "nft_owner":"0xe2bcf8373f6a6bd14189c7d4c5dbe7be8838937e",
+        "nft_token_id":649,
         "timestamp": int(time.time()),
         "signature":""
     }

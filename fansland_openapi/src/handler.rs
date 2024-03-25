@@ -29,8 +29,7 @@ pub async fn get_nft_ticket_qrcode(
         + "&"
         + &req.timestamp.to_string()
         + "&"
-        + okx_salt
-        ;
+        + okx_salt;
 
     // 接口签名验签
     let now_ts = SystemTime::now()
@@ -71,13 +70,20 @@ pub async fn get_nft_ticket_qrcode(
             }),
         ));
     }
+    let mut fansland_nft_contract_address = req.nft_contract.to_lowercase();
+
+    // FIX: for fix , 之前BSC早鸟票使用了大写, 使用这种方式修补, 2024-3-25 by yqq
+    if fansland_nft_contract_address.to_lowercase() == "0xbf36ab3aed81bf8553b52c61041904d98ee882c2"
+    {
+        fansland_nft_contract_address = String::from("0xBf36aB3AeD81Bf8553B52c61041904d98Ee882C2");
+    }
 
     let salt = "QrCode@fansland.io2024-888";
     let hash_msg = String::new()
-        + &req.chain_id.to_string()
-        + &req.nft_contract
+        + &fansland_nft_contract_address
         + &req.nft_token_id.to_string()
-        + &req.nft_owner
+        + &req.nft_owner.to_lowercase()
+        + &req.chain_id.to_string()
         + salt;
     let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
     let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
