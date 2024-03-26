@@ -421,8 +421,11 @@ pub async fn sign_in_with_ethereum(
             .duration_since(UNIX_EPOCH)
             .map_err(new_internal_error)?
             .as_secs()
-            + 80000,
+            + 22 * 3600,
     );
+    // 1: web2 , 2: web3 ， 固定是2即可
+    jwt_token.set_user_type(2);
+
     let token = jwt_token
         .create_token(TOKEN_SECRET)
         .map_err(new_internal_error)?;

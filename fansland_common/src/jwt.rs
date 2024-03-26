@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct JWTToken {
     user_address: String,
     exp: u64,
+    user_type: u8,
 }
 
 impl JWTToken {
