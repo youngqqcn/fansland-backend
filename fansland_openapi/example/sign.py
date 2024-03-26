@@ -41,6 +41,8 @@ def main():
     # 设置签名
     req["signature"] = sig
 
+    print(req)
+
 
     # 请求接口
     resp = requests.post(
