@@ -58,7 +58,7 @@ start-telegram-pro-bot:
 
 
 stop:
-	ps aux | grep fansland | grep -v grep | awk '{print $$2}' | xargs kill
+	ps aux | grep fansland | grep -v grep | grep -v fansland_web |  awk '{print $$2}' | xargs kill
 
 
 # 删除redis的 key
