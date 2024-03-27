@@ -2,6 +2,7 @@ use clap::{arg, Parser};
 use ctrlc;
 use dotenv::dotenv;
 use ethers::providers::PendingTransaction;
+use hex::ToHex;
 use redis::Client;
 use redis_pool::RedisPool;
 use std::io::{Error, ErrorKind};
@@ -78,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
 
         // 睡眠一段时间，然后继续下一次循环
         // 1分钟更新一次即可
-        for _ in 0..60 {
+        for _ in 0..3 {
             sleep(Duration::from_secs(1)).await;
             if !r.load(Ordering::SeqCst) {
                 break;
@@ -86,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    println!("Received SIGKILL. Exiting...");
+    tracing::info!("Received SIGKILL. Exiting...");
 
     Ok(())
 }
@@ -125,9 +126,9 @@ async fn airdrop_task(
     }
 
     tracing::info!("values[0]: {:?}", &values[0][0]);
+    let raw_airdrop_msg_str = values[0][0].clone().to_lowercase();
 
     // 按照下划线分割
-    let raw_airdrop_msg_str = values[0][0].clone();
     let airdrop_msgs: Vec<&str> = raw_airdrop_msg_str
         .split('_')
         .filter(|&x| x != "airdrop")
@@ -141,56 +142,83 @@ async fn airdrop_task(
     let chain_id = airdrop_msgs[1].parse::<u64>()?;
     let token_id = airdrop_msgs[2].parse::<u64>()?;
     let recipient = airdrop_msgs[3].to_owned();
+    // 检查 recipient 是否合法
+    let _ = recipient.parse::<Address>()?;
 
     // 检查tokenId是否已经上链
     let check_key = format!("nft:{0}:nft:tokenid:owner:{1}", chain_id, token_id);
     match redis::cmd("GET")
         .arg(&check_key)
         .query_async::<_, Option<String>>(&mut rds_conn)
-        .await
+        .await?
     {
-        Ok(x) => match x {
-            Some(k) => {
-                tracing::error!(
-                    "chainId:{}, tokenId:{}已经mint,owner:{}, 不能重复mint。",
-                    chain_id,
-                    token_id,
-                    k
-                );
-
-                // 这里直接返回
-                return Ok(());
-            }
-            None => {
-                tracing::info!("chainId:{}, tokenId:{}没有mint", chain_id, token_id);
-            }
-        },
-        Err(e) => {
-            // 将已经取出的消息，插回去, 不一定能成功
-            // TODO: 优化这种处理方式
-            tracing::info!(
-                "redis发生错误,将消息写回redis, key: {}  , value: {}",
-                &key,
-                &raw_airdrop_msg_str
+        Some(k) => {
+            tracing::error!(
+                "chainId:{}, tokenId:{}已经mint,owner:{}, 不能重复mint。",
+                chain_id,
+                token_id,
+                k
             );
-            let _ = redis::pipe()
-                .rpush(key.clone(), raw_airdrop_msg_str.clone())
-                .query_async(&mut rds_conn)
-                .await
-                .map_err(|e| {
-                    tracing::error!("error: {:?}", e);
-                    e
-                })?;
-            return Err(Box::new(e));
+
+            // 这里直接返回
+            return Ok(());
+        }
+        None => {
+            tracing::info!("chainId:{}, tokenId:{}没有mint", chain_id, token_id);
         }
     }
 
-    // TODO: 检查是否存在消息处理记录， 防止短时间内的重复消息
-    //
+    // 检查是否存在消息处理记录， 防止短时间内的重复消息
+    let msg_handle_record_key = format!("airdroplogs:{}:{}", chain_id, raw_airdrop_msg_str);
+    match redis::cmd("GET")
+        .arg(&msg_handle_record_key)
+        .query_async::<_, Option<String>>(&mut rds_conn)
+        .await?
+    {
+        Some(v) => {
+            if v == "peding" {
+                tracing::info!("旧消息,之前处理过,但是没有完全成功, 继续处理");
+            } else if v.starts_with("0x") && v.len() == 66 {
+                tracing::info!(
+                    "此消息已处理且空投成功, 不再重复处理, 消息: {},  txhash: {}",
+                    raw_airdrop_msg_str,
+                    v
+                );
 
-    // 检查 recipient 是否合法
-    let _ = recipient.parse::<Address>()?;
+                return Ok(());
+            }
+        }
+        None => {
+            tracing::info!("新消息，但是没有最终成功, 继续处理");
+        }
+    }
 
+    // 如果有空投消息, 先将空投消息重新写回去（写到队尾），防止后面处理过程中出错,导致消息丢失
+    let _ = redis::pipe()
+        .rpush(key.clone(), raw_airdrop_msg_str.clone())
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(|e| {
+            tracing::error!("消息冗余写回失败: {:?}", e);
+            e
+        })?;
+    tracing::info!(
+        "消息冗余写回成功, key: {}  , value: {}",
+        &key,
+        &raw_airdrop_msg_str
+    );
+
+    // 插入消息处理记录, value默认是 pending, 表示已经开始处理, 但未成功
+    let _ = redis::pipe()
+        .set(msg_handle_record_key.clone(), "pending")
+        .query_async(&mut rds_conn)
+        .await
+        .map_err(|e| {
+            tracing::error!("error: {:?}", e);
+            e
+        })?;
+
+    // 开始空投
     match airdrop(
         chain_id,
         rpc_url.clone(),
@@ -201,25 +229,22 @@ async fn airdrop_task(
     )
     .await
     {
-        Ok(_) => {
-            // TODO: 将txhash插入redis, 作为记录
-        }
-        Err(e) => {
-            // 发生错误，将key和redis重新写回redis中，防止消息丢失
-            tracing::error!("airdrop发生错误: {}", e);
-            tracing::info!(
-                "将消息写回redis, key: {}  , value: {}",
-                &key,
-                &raw_airdrop_msg_str
-            );
+        Ok(txhash) => {
+            // 将txhash插入redis, 作为记录
+            tracing::info!("交易成功, 将txhash写入redis保存, txhash:{}", txhash);
+
             let _ = redis::pipe()
-                .rpush(key.clone(), raw_airdrop_msg_str.clone())
+                .set(msg_handle_record_key.clone(), txhash.clone())
                 .query_async(&mut rds_conn)
                 .await
                 .map_err(|e| {
                     tracing::error!("error: {:?}", e);
                     e
                 })?;
+        }
+        Err(e) => {
+            // 因为一开始就已经冗余写回, 因此这里不做写回操作
+            return Err(e);
         }
     }
 
@@ -234,7 +259,7 @@ async fn airdrop(
     type_id: u64,
     recipient: String,
     token_id: u64,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<String, Box<dyn std::error::Error>> {
     tracing::info!(
         "开始空投===chainId:{}, contract:{}, type_id:{}, recipient:{}, token_id:{}",
         chain_id,
@@ -270,6 +295,7 @@ async fn airdrop(
     tracing::info!("==================");
 
     let pending_tx: PendingTransaction<Http> = tx.send().await?;
+    let txhash: String = "0x".to_owned() + &pending_tx.tx_hash().encode_hex::<String>();
     tracing::info!("交易已广播,等待区块确认: {:?}", pending_tx);
     tracing::info!("==================");
 
@@ -280,13 +306,13 @@ async fn airdrop(
         if let Some(status) = x.status {
             if status == 1.into() {
                 // 成功
-                tracing::info!("=====交易成功=====");
+                tracing::info!("=====交易成功=====:{}", txhash);
             } else {
                 // 失败
-                tracing::info!("=====交易失败=====");
-                return Err(Box::new(std::io::Error::new(ErrorKind::Other, "易失败")));
+                tracing::info!("=====交易失败=====txhash: {}", txhash);
+                return Err(Box::new(std::io::Error::new(ErrorKind::Other, "交易失败")));
             }
         }
     }
-    Ok(())
+    Ok(txhash)
 }
