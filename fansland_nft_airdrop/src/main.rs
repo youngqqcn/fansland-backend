@@ -1,6 +1,7 @@
 use clap::{arg, Parser};
 use ctrlc;
 use dotenv::dotenv;
+use ethers::providers::PendingTransaction;
 use redis::Client;
 use redis_pool::RedisPool;
 use std::io::{Error, ErrorKind};
@@ -268,13 +269,24 @@ async fn airdrop(
     tracing::info!("raw_tx: {:?}", tx);
     tracing::info!("==================");
 
-    let pending_tx = tx.send().await?;
-    tracing::info!("pending_tx: {:?}", pending_tx);
+    let pending_tx: PendingTransaction<Http> = tx.send().await?;
+    tracing::info!("交易已广播,等待区块确认: {:?}", pending_tx);
     tracing::info!("==================");
 
     let mined_tx = pending_tx.await?;
-    tracing::info!("minted_tx: {:?}", mined_tx);
+    tracing::info!("交易已确认,交易回执: {:?}", mined_tx);
     tracing::info!("==================");
-
+    if let Some(x) = mined_tx {
+        if let Some(status) = x.status {
+            if status == 1.into() {
+                // 成功
+                tracing::info!("=====交易成功=====");
+            } else {
+                // 失败
+                tracing::info!("=====交易失败=====");
+                return Err(Box::new(std::io::Error::new(ErrorKind::Other, "易失败")));
+            }
+        }
+    }
     Ok(())
 }
