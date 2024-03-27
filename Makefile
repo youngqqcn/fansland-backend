@@ -29,6 +29,10 @@ start-nft-test:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 84532 > nft_ticket_84532.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --chainid 59140 > nft_ticket_59140.log 2>&1 &
 
+start-airdrop-test:
+	cargo run --bin fansland_nft_airdrop -r -- --chainid 80001 > nft_airdrop_80001.log 2>&1 &
+	cargo run --bin fansland_nft_airdrop -r -- --chainid 97 > nft_airdrop_97.log 2>&1 &
+
 start-rank:
 	cargo run --bin fansland_points_rank -r > points_rank.log 2>&1 &
 

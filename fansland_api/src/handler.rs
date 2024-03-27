@@ -836,7 +836,7 @@ pub async fn verify_sig(
     tracing::debug!("==========需要验证签名接口===========");
     // check address
     if !(address.len() == 42 && address.starts_with("0x")) {
-        tracing::error!("====地址格式错误:{address}==========");
+        tracing::error!("====地址格式错误:{}==========", address);
         return Err((
             StatusCode::BAD_REQUEST,
             Json(RespVO::<String> {
