@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     let contract = FanslandNFTContract::new(contract_address, signer);
 
     let type_id: U256 = 0.into();
-    let token_id: U256 = 60000.into();
+    let token_id: U256 = 60002.into();
     let recipient: Address = String::from("0x274848a43f6afdDEed6623FB45c8B3e369936B5E")
         .parse()
         .unwrap();

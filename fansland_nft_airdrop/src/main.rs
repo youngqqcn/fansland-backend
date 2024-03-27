@@ -1,22 +1,29 @@
-use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::{arg, Parser};
 use ctrlc;
 use dotenv::dotenv;
-use ethers::contract::abigen;
-use ethers::providers::{Http, Provider};
-use ethers::types::Address;
-use rand::Rng;
 use redis::Client;
 use redis_pool::RedisPool;
-use std::env;
-use std::num::{NonZeroU16, NonZeroUsize};
+use std::io::{Error, ErrorKind};
+use std::num::NonZeroUsize;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::time::sleep;
+
+use ethers::{
+    contract::abigen,
+    middleware::SignerMiddleware,
+    providers::{Http, Provider},
+    signers::{LocalWallet, Signer},
+    types::{Address, U256},
+};
+// use eyre::Result;
+use std::convert::TryFrom;
 use tracing::Level;
+
+use anyhow::Result;
+use std::time::Duration;
+use tokio::time::sleep;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -95,23 +102,12 @@ async fn airdrop_task(
     let rds_client = Client::open(rds_url).unwrap();
     let redis_pool = RedisPool::from(rds_client);
     let mut rds_conn = redis_pool.aquire().await?;
-    // let mut rng = rand::thread_rng();
 
     let key = String::from("redeemairdrop:") + &chainid.to_string();
 
-    let provider = Provider::<Http>::try_from(rpc_url)?;
-    abigen!(FanslandNFTContract, "FanslandNFT.abi",);
-    tracing::info!("nft_contract address: {}", contract_address);
-    tracing::info!("rpc_url : {}", rpc_url);
-    let client = Arc::new(provider);
-    let fansland_nft_contract_address = contract_address;
-    let contract_address_h160: Address = contract_address.parse()?;
-    let contract = FanslandNFTContract::new(contract_address_h160, client.clone());
-
-
     // 使用redis
-    let addresses_ret: Vec<Vec<String>> = redis::pipe()
-        .lpop(key, Some(NonZeroUsize::new(1).unwrap()))
+    let values: Vec<Vec<String>> = redis::pipe()
+        .lpop(key.clone(), Some(NonZeroUsize::new(1).unwrap()))
         .query_async(&mut rds_conn)
         .await
         .map_err(|e| {
@@ -119,11 +115,166 @@ async fn airdrop_task(
             e
         })?;
 
-    tracing::info!("addresses: {:?}", addresses_ret.len());
-    tracing::info!("addresses length: {:?}", addresses_ret[0].len());
+    tracing::info!("addresses: {:?}", values.len());
+    tracing::info!("addresses length: {:?}", values[0].len());
 
+    if values[0].len() == 0 {
+        tracing::info!("暂时没有空投消息");
+        return Ok(());
+    }
 
-    // contract.redeem_airdrop(type_id, token_id, recipient);
+    tracing::info!("values[0]: {:?}", &values[0][0]);
+
+    // 按照下划线分割
+    let raw_airdrop_msg_str = values[0][0].clone();
+    let airdrop_msgs: Vec<&str> = raw_airdrop_msg_str
+        .split('_')
+        .filter(|&x| x != "airdrop")
+        .collect();
+    tracing::info!("airdrop_msgs: {:?}", airdrop_msgs);
+    if airdrop_msgs.len() != 4 {
+        return Err(Box::new(Error::new(ErrorKind::Other, "空投消息非法")));
+    }
+
+    let type_id = airdrop_msgs[0].parse::<u64>()?;
+    let chain_id = airdrop_msgs[1].parse::<u64>()?;
+    let token_id = airdrop_msgs[2].parse::<u64>()?;
+    let recipient = airdrop_msgs[3].to_owned();
+
+    // 检查tokenId是否已经上链
+    let check_key = format!("nft:{0}:nft:tokenid:owner:{1}", chain_id, token_id);
+    match redis::cmd("GET")
+        .arg(&check_key)
+        .query_async::<_, Option<String>>(&mut rds_conn)
+        .await
+    {
+        Ok(x) => match x {
+            Some(k) => {
+                tracing::error!(
+                    "chainId:{}, tokenId:{}已经mint,owner:{}, 不能重复mint。",
+                    chain_id,
+                    token_id,
+                    k
+                );
+
+                // 这里直接返回
+                return Ok(());
+            }
+            None => {
+                tracing::info!("chainId:{}, tokenId:{}没有mint", chain_id, token_id);
+            }
+        },
+        Err(e) => {
+            // 将已经取出的消息，插回去, 不一定能成功
+            // TODO: 优化这种处理方式
+            tracing::info!(
+                "redis发生错误,将消息写回redis, key: {}  , value: {}",
+                &key,
+                &raw_airdrop_msg_str
+            );
+            let _ = redis::pipe()
+                .rpush(key.clone(), raw_airdrop_msg_str.clone())
+                .query_async(&mut rds_conn)
+                .await
+                .map_err(|e| {
+                    tracing::error!("error: {:?}", e);
+                    e
+                })?;
+            return Err(Box::new(e));
+        }
+    }
+
+    // TODO: 检查是否存在消息处理记录， 防止短时间内的重复消息
+    //
+
+    // 检查 recipient 是否合法
+    let _ = recipient.parse::<Address>()?;
+
+    match airdrop(
+        chain_id,
+        rpc_url.clone(),
+        contract_address.clone(),
+        type_id,
+        recipient,
+        token_id,
+    )
+    .await
+    {
+        Ok(_) => {
+            // TODO: 将txhash插入redis, 作为记录
+        }
+        Err(e) => {
+            // 发生错误，将key和redis重新写回redis中，防止消息丢失
+            tracing::error!("airdrop发生错误: {}", e);
+            tracing::info!(
+                "将消息写回redis, key: {}  , value: {}",
+                &key,
+                &raw_airdrop_msg_str
+            );
+            let _ = redis::pipe()
+                .rpush(key.clone(), raw_airdrop_msg_str.clone())
+                .query_async(&mut rds_conn)
+                .await
+                .map_err(|e| {
+                    tracing::error!("error: {:?}", e);
+                    e
+                })?;
+        }
+    }
+
+    Ok(())
+}
+
+#[warn(dead_code)]
+async fn airdrop(
+    chain_id: u64,
+    rpc_url: String,
+    contract_address: String,
+    type_id: u64,
+    recipient: String,
+    token_id: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    tracing::info!(
+        "开始空投===chainId:{}, contract:{}, type_id:{}, recipient:{}, token_id:{}",
+        chain_id,
+        contract_address,
+        type_id,
+        recipient,
+        token_id
+    );
+
+    abigen!(FanslandNFTContract, "FanslandNFT.abi",);
+    tracing::info!("nft_contract address: {}", &contract_address);
+    tracing::info!("rpc_url : {}", rpc_url);
+    let contract_address: Address = contract_address.parse()?;
+    let provider = Provider::<Http>::try_from(rpc_url)?;
+
+    // TODO: fix private key
+    let from_wallet: LocalWallet =
+        "0xa1102aa1ecf406a2633bd227efc4ecd16aa5c642d3b85a606b7b20fad109a50d"
+            .parse::<LocalWallet>()?
+            .with_chain_id(chain_id);
+
+    let signer = Arc::new(SignerMiddleware::new(provider, from_wallet));
+    tracing::info!("==================");
+    tracing::info!("from_wallet: {}", signer.address());
+    let contract = FanslandNFTContract::new(contract_address, signer);
+
+    let type_id: U256 = type_id.into();
+    let token_id: U256 = token_id.into();
+    let recipient: Address = recipient.parse()?;
+
+    let tx = contract.redeem_airdrop(type_id, token_id, recipient);
+    tracing::info!("raw_tx: {:?}", tx);
+    tracing::info!("==================");
+
+    let pending_tx = tx.send().await?;
+    tracing::info!("pending_tx: {:?}", pending_tx);
+    tracing::info!("==================");
+
+    let mined_tx = pending_tx.await?;
+    tracing::info!("minted_tx: {:?}", mined_tx);
+    tracing::info!("==================");
 
     Ok(())
 }

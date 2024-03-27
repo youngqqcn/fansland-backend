@@ -1,6 +1,14 @@
 [workspace]
-members = ["fansland_api", "examples/fansland_blake3", "fansland_common", "fansland_nft_ticket", "fansland_openapi", "fansland_points_migrate", "fansland_points_rank", "examples/fansland_jwt", "fansland_nft_airdrop", "examples/fansland_airdrop_demo"]
+members = [
+    "fansland_api",
+    "examples/fansland_blake3",
+    "fansland_common",
+    "fansland_nft_ticket",
+    "fansland_openapi",
+    "fansland_points_migrate",
+    "fansland_points_rank",
+    "examples/fansland_jwt",
+    "fansland_nft_airdrop",
+    "examples/fansland_airdrop_demo",
+]
 resolver = "2"
-
-
-[fansland_jwt]
