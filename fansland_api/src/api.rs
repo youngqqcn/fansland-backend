@@ -78,6 +78,9 @@ pub struct QueryTicketQrCodeReq {
     pub address: String,
     pub token_id: u32, // token_id
     pub chainid: u64,  // chainid
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_type: Option<u8>, // 访问类型:  2: web2  3: web3
 }
 
 #[derive(Default, Deserialize, Clone, Debug, Serialize)]

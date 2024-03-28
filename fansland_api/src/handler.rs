@@ -507,7 +507,23 @@ pub async fn query_ticket_qrcode_by_address(
 
     tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
 
-    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id, req.chainid).await
+    let acc_type = match req.access_type {
+        Some(x) => match x {
+            2 => 2,
+            3 => 3,
+            _ => 3,
+        },
+        None => 3,
+    };
+
+    query_ticket_qrcode_by_token_id(
+        rds_conn,
+        req.address.clone(),
+        req.token_id,
+        req.chainid,
+        acc_type,
+    )
+    .await
 }
 
 pub async fn query_ticket_qrcode_by_token_id(
@@ -515,32 +531,62 @@ pub async fn query_ticket_qrcode_by_token_id(
     address: String,
     token_id: u32,
     chainid: u64,
+    access_type: u8,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     tracing::debug!("=从redis获取绑定tokenid对应的二维码, chainid:{chainid}, adddress:{address}, token_id:{token_id} ",);
+    // 2024-03-28
+    // 如果是web2用户，用兑换码兑换，立即来查看, 直接可以查看二维码
+    // 设置： SADD redeemaddress {chainId}_{tokenId}_{userAddress}
+    // 判断是否在集合:  SISMEMBER redeemaddress {chainId}_{tokenId}_{userAddress}
+    // let mut token_id_owner = address;
 
-    // 从redis中获取该token_id的owner
-    let key_prefix =
-        "nft:".to_owned() + &chainid.to_string() + ":nft:tokenid:owner:" + &token_id.to_string();
-    let token_id_owner = match redis::cmd("GET")
-        .arg(&key_prefix)
-        .query_async::<_, Option<String>>(&mut rds_conn)
-        .await
-        .map_err(new_internal_error)?
-    {
-        Some(m) => m,
-        None => "".to_owned(),
-    };
+    // access_type 访问类型:  3: web3 ,  2: web2
+    let mut is_web2_redeem = false;
+    if access_type == 2 {
+        let redeemaddress_key = "redeemaddress";
+        let member = format!("{}_{}_{}", chainid, token_id, address.to_lowercase());
+        let is_redeem_ret: Vec<u64> = redis::pipe()
+            .sismember(redeemaddress_key, member)
+            .query_async(&mut rds_conn)
+            .await
+            .map_err(new_internal_error)?;
 
-    // 比对redis中的owner与参数中的owner是否相同
-    if !token_id_owner.eq(&address) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(RespVO::<String> {
-                code: Some(11001),
-                msg: Some("The NFT ticket is pending. Please wait a few minutes.".to_owned()),
-                data: None,
-            }),
-        ));
+        is_web2_redeem = is_redeem_ret[0] == 1;
+
+        if is_web2_redeem {
+            tracing::info!("Good, 用户存在兑换码兑换记录, 走web2的业务逻辑,直接返回二维码");
+        } else {
+            tracing::info!("Sorry, 不存在兑换记录, 要走web3的业务逻辑, 校验链上数据情况");
+        }
+    }
+
+    if !is_web2_redeem {
+        // 从redis中获取该token_id的owner
+        let key_prefix = "nft:".to_owned()
+            + &chainid.to_string()
+            + ":nft:tokenid:owner:"
+            + &token_id.to_string();
+        let token_id_owner = match redis::cmd("GET")
+            .arg(&key_prefix)
+            .query_async::<_, Option<String>>(&mut rds_conn)
+            .await
+            .map_err(new_internal_error)?
+        {
+            Some(m) => m,
+            None => "".to_owned(),
+        };
+
+        // 比对redis中的owner与参数中的owner是否相同
+        if !token_id_owner.to_lowercase().eq(&address.to_lowercase()) {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(RespVO::<String> {
+                    code: Some(11001),
+                    msg: Some("The NFT ticket is pending. Please wait a few minutes.".to_owned()),
+                    data: None,
+                }),
+            ));
+        }
     }
 
     // 根据算法生成二维码
@@ -557,7 +603,7 @@ pub async fn query_ticket_qrcode_by_token_id(
     let hash_msg = String::new()
         + &fansland_nft_contract_address
         + &token_id.to_string()
-        + &token_id_owner
+        + &address.to_lowercase()
         + &chainid.to_string()
         + salt;
     let keccak_hash = ethers::utils::keccak256(hash_msg.as_bytes());
@@ -569,7 +615,7 @@ pub async fn query_ticket_qrcode_by_token_id(
         nft_token_id: token_id,
         qrcode: qrcode,
         contract_address: fansland_nft_contract_address,
-        chain_id: 0,
+        chain_id: chainid,
     };
 
     Ok(RespVO::from(&r).resp_json())
@@ -640,7 +686,9 @@ pub async fn get_ticket_qrcode_by_secret_link(
     }
 
     // 查询门票二维码
-    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id, req.chainid).await
+    // 私密链接访问， access_type 默认为 3， 即 web3用户
+    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id, req.chainid, 3)
+        .await
 }
 
 // 更新密码

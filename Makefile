@@ -7,6 +7,9 @@ start-api-uat:
 start-api-main:
 	cargo run --bin fansland_api  -r -- --env pro > api.log 2>&1 &
 
+start-openapi:
+	cargo run --bin fansland_api  -r  > openapi.log 2>&1 &
+
 start-nft-main:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 137 > nft_ticket_137.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --chainid 56 > nft_ticket_56.log 2>&1 &
@@ -15,6 +18,10 @@ start-nft-main:
 start-nft-test:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 80001 > nft_ticket_80001.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --chainid 97 > nft_ticket_97.log 2>&1 &
+
+start-airdrop-main:
+	cargo run --bin fansland_nft_airdrop -r -- --chainid 137 > nft_airdrop_137.log 2>&1 &
+	cargo run --bin fansland_nft_airdrop -r -- --chainid 56 > nft_airdrop_56.log 2>&1 &
 
 
 start-airdrop-test:
