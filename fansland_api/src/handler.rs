@@ -35,9 +35,11 @@ const TOKEN_SECRET: &str = "GXFC@Fansland.io@2024";
 pub struct AppState {
     // pub psql_pool: Pool<Manager<PgConnection>>,
     pub rds_pool: RedisPool<Client, Connection>,
+    pub web_domain: String,
 }
 
 // 获取积分排行榜
+#[allow(dead_code)]
 pub async fn get_points_rank(
     headers: HeaderMap,
     State(app_state): State<AppState>,
@@ -110,6 +112,7 @@ pub async fn get_points_rank(
 }
 
 // 获取地址积分
+#[allow(dead_code)]
 pub async fn get_address_points(
     headers: HeaderMap,
     State(app_state): State<AppState>,
@@ -176,6 +179,7 @@ pub async fn get_address_points(
 }
 
 // 获取地址积分记录
+#[allow(dead_code)]
 pub async fn get_address_points_history(
     headers: HeaderMap,
     State(app_state): State<AppState>,
@@ -299,7 +303,7 @@ pub async fn get_login_signmsg(
     let _ = verify_sig(headers.clone(), req.address.clone()).await?;
     tracing::debug!("========获取签名消息===");
 
-    let msg_domain = std::env::var("FANSLAND_WEBSITE_URL").unwrap();
+    let msg_domain = app_state.web_domain;
     let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
     let msg_timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let msg_template = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland!\n\nURI: {}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",

@@ -3,6 +3,7 @@ use axum::{
     routing::post,
     Json, Router,
 };
+use clap::Parser;
 use fansland_common::RespVO;
 use redis::Client;
 use redis_pool::RedisPool;
@@ -12,21 +13,39 @@ use tracing::{warn, Level};
 use dotenv::dotenv;
 
 use crate::handler::{
-    bind_email, get_address_points, get_address_points_history, get_login_signmsg, get_points_rank,
-    get_ticket_qrcode_by_secret_link, query_ticket_qrcode_by_address, query_user_by_address,
-    sign_in_with_ethereum, update_secret_link_passwd, AppState,
+    bind_email, get_login_signmsg, get_ticket_qrcode_by_secret_link,
+    query_ticket_qrcode_by_address, query_user_by_address, sign_in_with_ethereum,
+    update_secret_link_passwd, AppState,
 };
 
 mod api;
 mod extract;
 mod handler;
 
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// env ,  [test: for test env], [uat: for uat env], [pro: for pro env]
+    #[arg(short, long)]
+    #[arg()]
+    env: String,
+}
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    let args = Args::parse();
+
+    let web_domain = match args.env.as_str() {
+        "test" => "test-land.fansland.xyz",
+        "uat" => "uat.fansland.io",
+        "pro" => "fansland.io",
+        _ => panic!("invalid env"),
+    };
 
     // tracing_subscriber::registry()
-    //     .with(
+    //     .with(s
     //         tracing_subscriber::EnvFilter::try_from_default_env()
     //             .unwrap_or_else(|_| "example_tokio_postgres=debug".into()),
     //     )
@@ -44,6 +63,7 @@ async fn main() {
 
     let app_state = AppState {
         rds_pool: redis_pool.clone(),
+        web_domain: web_domain.to_owned(),
     };
 
     // build our application with some routes
@@ -62,10 +82,7 @@ async fn main() {
             post(get_ticket_qrcode_by_secret_link),
         )
         .route("/getSiweMsg", post(get_login_signmsg))
-        .route("/signInWithEthereum", post(sign_in_with_ethereum))
-        .route("/getAddressPoints", post(get_address_points))
-        .route("/getAddressPointsHistory", post(get_address_points_history))
-        .route("/getPointsRank", post(get_points_rank));
+        .route("/signInWithEthereum", post(sign_in_with_ethereum));
 
     let app_routers = need_auth_routers
         .merge(noneed_auth_routers)

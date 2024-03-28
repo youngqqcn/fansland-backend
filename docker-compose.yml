@@ -37,7 +37,7 @@ services:
   #     - 5432:5432
   #   volumes:
   #     - ./data/postgresql:/var/lib/postgresql/data
-  #   restart: no #跟随docker的启动而启动
+    restart: always #跟随docker的启动而启动
   #   environment:
   #     - POSTGRES_PASSWORD=Qss2024postgG
   #     - POSTGRES_USER=testuser

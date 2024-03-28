@@ -1,8 +1,11 @@
-api:
-	cargo run --bin fansland_api
+start-api-test:
+	cargo run --bin fansland_api  -r -- --env test > api.log 2>&1 &
 
-start-api:
-	cargo run --bin fansland_api -r > api.log 2>&1 &
+start-api-uat:
+	cargo run --bin fansland_api  -r -- --env uat > api.log 2>&1 &
+
+start-api-main:
+	cargo run --bin fansland_api  -r -- --env pro > api.log 2>&1 &
 
 start-nft-main:
 	cargo run --bin fansland_nft_ticket -r -- --chainid 137 > nft_ticket_137.log 2>&1 &
