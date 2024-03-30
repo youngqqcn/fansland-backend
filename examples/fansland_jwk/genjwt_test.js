@@ -45,14 +45,14 @@ const generateJwt = (address) => {
   const token = jwt.sign(
     {
       iss: "https://static.fansland.io/json/jwk.json",
-    //   exp: Math.floor((Date.now() + 1000 * 3600 * 24 * 365) / 1000),
-      exp: Math.floor((Date.now() + 1000 * 5 * 60) / 1000),
+      //   exp: Math.floor((Date.now() + 1000 * 3600 * 24 * 365) / 1000),
+      exp: Math.floor((Date.now() + 1000 * 30 * 60) / 1000),
       iat: Math.floor(Date.now() / 1000),
       aud: "www.example.com",
       sender: address,
       sub: "a80b1ece-e68d-11ee-95e0-6bcefe10fe58",
-      jwt_id: uuid.v1()
-    //   jwt_id: "7b0e2b04-faa3-48f0-b477-38a641a87467:166822658140065792"
+      jwt_id: uuid.v1(),
+      //   jwt_id: "7b0e2b04-faa3-48f0-b477-38a641a87467:166822658140065792"
     },
     privateKey,
     { algorithm: "RS256" }
@@ -63,10 +63,10 @@ const generateJwt = (address) => {
 
 // export default generateJwt;
 
-// token = generateJwt("hellloworld");
-// console.log(token);
+token = generateJwt("hellloworld");
+console.log(token);
 
-//==========
-let token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ3d3cuZXhhbXBsZS5jb20iLCJleHAiOjE3MTEwMTc4NDAsImlhdCI6MTcxMTAxNzU0MCwiaXNzIjoiaHR0cHM6Ly9zdGF0aWMuZmFuc2xhbmQuaW8vanNvbi9qd2suanNvbiIsImp3dF9pZCI6InlvdXJfand0X2lkIiwic2VuZGVyIjoieW91cl9hZGRyZXNzIiwic3ViIjoiYTgwYjFlY2UtZTY4ZC0xMWVlLTk1ZTAtNmJjZWZlMTBmZTU4In0.UagO6-KuCrr51pbw_3uGL5Z7AzaN7DN379D85OG7UMo9LmLFbEGw9xJzHnEkZHBijdUWrowy__6C4CyKDL26jEPpY6ilumdJUn-30eyiU2RhkYG0MfGX3E17488w3Jl_EJoCgCoULaSELXFxthI0nJ7xooZlYht6L9vyDvS-2d6JQ_AfD-wFfFPLUyxFxhzoyQH-3wQ-L6ku4orMf7wh12gu_hgxndBe7AgFAKpe-_Ubxi0HPyYZ8XTBIGrPoNdoBvvkEd0hH4wZFF96HTRkPQFSQX_iELEWa8BhvJGuUctscNnQEuQ7dqJBkRsEx8qM4P73ryxHRRU5j1Ul7Qv8TQ";
-const d = jwt.verify(token, publicKey);
-console.log(d);
+// //==========
+// let token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ3d3cuZXhhbXBsZS5jb20iLCJleHAiOjE3MTEwMTc4NDAsImlhdCI6MTcxMTAxNzU0MCwiaXNzIjoiaHR0cHM6Ly9zdGF0aWMuZmFuc2xhbmQuaW8vanNvbi9qd2suanNvbiIsImp3dF9pZCI6InlvdXJfand0X2lkIiwic2VuZGVyIjoieW91cl9hZGRyZXNzIiwic3ViIjoiYTgwYjFlY2UtZTY4ZC0xMWVlLTk1ZTAtNmJjZWZlMTBmZTU4In0.UagO6-KuCrr51pbw_3uGL5Z7AzaN7DN379D85OG7UMo9LmLFbEGw9xJzHnEkZHBijdUWrowy__6C4CyKDL26jEPpY6ilumdJUn-30eyiU2RhkYG0MfGX3E17488w3Jl_EJoCgCoULaSELXFxthI0nJ7xooZlYht6L9vyDvS-2d6JQ_AfD-wFfFPLUyxFxhzoyQH-3wQ-L6ku4orMf7wh12gu_hgxndBe7AgFAKpe-_Ubxi0HPyYZ8XTBIGrPoNdoBvvkEd0hH4wZFF96HTRkPQFSQX_iELEWa8BhvJGuUctscNnQEuQ7dqJBkRsEx8qM4P73ryxHRRU5j1Ul7Qv8TQ";
+// const d = jwt.verify(token, publicKey);
+// console.log(d);
