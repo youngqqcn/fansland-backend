@@ -213,7 +213,7 @@ async fn airdrop_task(
             }
         }
         None => {
-            tracing::info!("新消息，但是没有最终成功, 继续处理");
+            tracing::info!("新消息,不存在消息处理记录");
         }
     }
 
