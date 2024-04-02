@@ -177,7 +177,7 @@ async fn airdrop_task(
         .await?
     {
         Some(k) => {
-            tracing::error!(
+            tracing::info!(
                 "chainId:{}, tokenId:{}已经mint,owner:{}, 不能重复mint。",
                 chain_id,
                 token_id,
