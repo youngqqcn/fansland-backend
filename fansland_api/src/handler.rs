@@ -615,6 +615,8 @@ pub async fn query_ticket_qrcode_by_token_id(
     let bz_qrcode = &keccak_hash[keccak_hash.len() - 15..];
     let qrcode = String::from("1:") + &hex::encode(bz_qrcode);
 
+    tracing::info!("qrcode: {}", qrcode);
+
     let r = QueryTicketQrCodeResp {
         user_address: address,
         nft_token_id: token_id,
