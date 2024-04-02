@@ -64,6 +64,7 @@ async fn main() {
     let app_state = AppState {
         rds_pool: redis_pool.clone(),
         web_domain: web_domain.to_owned(),
+        env: args.env.to_uppercase(),
     };
 
     // build our application with some routes

@@ -36,6 +36,7 @@ pub struct AppState {
     // pub psql_pool: Pool<Manager<PgConnection>>,
     pub rds_pool: RedisPool<Client, Connection>,
     pub web_domain: String,
+    pub env: String,
 }
 
 // 获取积分排行榜
@@ -507,6 +508,9 @@ pub async fn query_ticket_qrcode_by_address(
 
     tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
 
+    let fansland_nft_contract_address =
+        std::env::var(format!("FANSLAND_NFT_{}_{}", req.chainid, app_state.env)).unwrap();
+
     let acc_type = match req.access_type {
         Some(x) => match x {
             2 => 2,
@@ -518,6 +522,7 @@ pub async fn query_ticket_qrcode_by_address(
 
     query_ticket_qrcode_by_token_id(
         rds_conn,
+        fansland_nft_contract_address,
         req.address.clone(),
         req.token_id,
         req.chainid,
@@ -528,6 +533,7 @@ pub async fn query_ticket_qrcode_by_address(
 
 pub async fn query_ticket_qrcode_by_token_id(
     mut rds_conn: RedisPoolConnection<Connection>,
+    contract_address: String,
     address: String,
     token_id: u32,
     chainid: u64,
@@ -590,8 +596,7 @@ pub async fn query_ticket_qrcode_by_token_id(
     }
 
     // 根据算法生成二维码
-    let mut fansland_nft_contract_address =
-        std::env::var(format!("FANSLAND_NFT_{}", chainid)).unwrap();
+    let mut fansland_nft_contract_address = contract_address;
     fansland_nft_contract_address = fansland_nft_contract_address.to_lowercase();
     // FIX: for fix , 之前BSC早鸟票使用了大写, 使用这种方式修补, 2024-3-25 by yqq
     if fansland_nft_contract_address.to_lowercase() == "0xbf36ab3aed81bf8553b52c61041904d98ee882c2"
@@ -685,10 +690,20 @@ pub async fn get_ticket_qrcode_by_secret_link(
             .into_response());
     }
 
+    let fansland_nft_contract_address =
+        std::env::var(format!("FANSLAND_NFT_{}_{}", req.chainid, app_state.env)).unwrap();
+
     // 查询门票二维码
     // 私密链接访问， access_type 默认为 3， 即 web3用户
-    query_ticket_qrcode_by_token_id(rds_conn, req.address.clone(), req.token_id, req.chainid, 3)
-        .await
+    query_ticket_qrcode_by_token_id(
+        rds_conn,
+        fansland_nft_contract_address,
+        req.address.clone(),
+        req.token_id,
+        req.chainid,
+        3,
+    )
+    .await
 }
 
 // 更新密码
