@@ -1,11 +1,11 @@
 use chrono::{DateTime, Local, TimeZone, Utc};
+use clap::{command, Parser};
 use ctrlc;
 use dotenv::dotenv;
 use rand::Rng;
 use redis::Client;
 use redis_pool::RedisPool;
 use sqlx::mysql::MySqlPoolOptions;
-use std::env;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -14,9 +14,22 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
 use tracing::Level;
 
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// env , test, uat, pro
+    #[arg(short, long)]
+    env: String,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv().ok();
+    let args = Args::parse();
+    let env = args.env.to_uppercase();
+
+    let database_url = std::env::var(format!("DATABASE_URL_{env}"))?;
 
     // tracing_subscriber::registry()
     //     .with(
@@ -43,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Running...");
     while r.load(Ordering::SeqCst) {
         // 更新积分排行榜
-        let err = update_points_rank().await;
+        let err = update_points_rank(database_url.clone()).await;
         match err {
             Ok(_) => {}
             Err(e) => {
@@ -67,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 // 更新积分排行榜
-async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
+async fn update_points_rank(database_url: String) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("将EVM积分记录搞到mysql中,与任务积分合并");
     let rds_url = std::env::var("REDIS_URL").unwrap();
     tracing::debug!("rds_url: {}", rds_url);
@@ -79,7 +92,7 @@ async fn update_points_rank() -> Result<(), Box<dyn std::error::Error>> {
     // mysql 数据库
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
-        .connect(&env::var("DATABASE_URL")?)
+        .connect(&database_url)
         .await?;
 
     // 使用redis

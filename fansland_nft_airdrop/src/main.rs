@@ -46,8 +46,10 @@ async fn main() -> anyhow::Result<()> {
     dotenv().ok();
     let args = Args::parse();
     let chainid: u64 = args.chainid;
-    let rpc_url = std::env::var(format!("RPC_URL_{chainid}")).unwrap();
-    let contract_address = std::env::var(format!("FANSLAND_NFT_{chainid}")).unwrap();
+    let env = args.env.to_uppercase();
+
+    let rpc_url = std::env::var(format!("RPC_URL_{chainid}_{env}")).unwrap();
+    let contract_address = std::env::var(format!("FANSLAND_NFT_{chainid}_{env}")).unwrap();
     let pk = match args.env.as_str() {
         // 6c696ad29d0fbc55aca9ebc07395406e3c396d6ae4684182b99f60f23f7d9b36
         // 0xDEe74737Aa7C9E75cc782419D97DE18Eb2918e81

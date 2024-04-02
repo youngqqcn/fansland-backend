@@ -28,6 +28,10 @@ struct Args {
     /// chainid , [80001: polygon-mumbai testnet] , [97: polygon-pos mainnet], [137: bsc-testnet], [56: bsc-mainnet]
     #[arg(short, long)]
     chainid: u64,
+
+    /// env , test, uat, pro
+    #[arg(short, long)]
+    env: String,
 }
 
 #[tokio::main]
@@ -44,10 +48,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     .init();
     // test().await?;
 
+    let env = args.env.to_uppercase();
+
     let chainid: u64 = args.chainid;
-    let rpc_url = std::env::var(format!("RPC_URL_{chainid}")).unwrap();
-    let contract_address = std::env::var(format!("FANSLAND_NFT_{chainid}")).unwrap();
-    let contract_create_block: u64 = std::env::var(format!("CONTRACT_CREATE_BLOCK_{chainid}"))
+    let rpc_url = std::env::var(format!("RPC_URL_{chainid}_{env}")).unwrap();
+    let contract_address = std::env::var(format!("FANSLAND_NFT_{chainid}_{env}")).unwrap();
+    let contract_create_block: u64 = std::env::var(format!("CONTRACT_CREATE_BLOCK_{chainid}_{env}"))
         .unwrap()
         .parse()?;
 
@@ -195,7 +201,7 @@ async fn update_token_id_owner(
                 let type_id: u64 = contract.token_id_type_map(token_id).call().await?.as_u64();
 
                 let qrcode_txt =
-                    gen_qrcode_text(chainid, token_id.as_u64(), to_addr_hex.to_lowercase());
+                    gen_qrcode_text(contract_address.clone(), chainid, token_id.as_u64(), to_addr_hex.to_lowercase());
                 tracing::info!("token_id qrcode: {}", qrcode_txt);
 
                 // 插入数据库
@@ -332,10 +338,9 @@ async fn update_token_id_owner(
     Ok(())
 }
 
-fn gen_qrcode_text(chainid: u64, token_id: u64, token_id_owner: String) -> String {
+fn gen_qrcode_text(contract_address: String, chainid: u64, token_id: u64, token_id_owner: String) -> String {
     // 根据算法生成二维码
-    let mut fansland_nft_contract_address =
-        std::env::var(format!("FANSLAND_NFT_{}", chainid)).unwrap();
+    let mut fansland_nft_contract_address = contract_address;
     let salt = "QrCode@fansland.io2024-888"; // TODO:
 
     // FIX: for fix , 之前BSC早鸟票使用了大写, 使用这种方式修补, 2024-3-25 by yqq

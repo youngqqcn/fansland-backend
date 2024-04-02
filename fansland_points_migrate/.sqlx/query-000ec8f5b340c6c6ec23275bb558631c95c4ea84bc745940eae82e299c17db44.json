@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n                        INSERT IGNORE INTO integral_request_record (id, app_id, biz_id, request_type, hash, chain_id, address, create_time, update_time, amount )\n                        VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?, ?)\n                                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "000ec8f5b340c6c6ec23275bb558631c95c4ea84bc745940eae82e299c17db44"
+}
