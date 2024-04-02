@@ -5,6 +5,7 @@ use ethers::providers::PendingTransaction;
 use hex::ToHex;
 use redis::Client;
 use redis_pool::RedisPool;
+use sha2::{Digest, Sha256};
 use std::io::{Error, ErrorKind};
 use std::num::NonZeroUsize;
 use std::sync::{
@@ -34,6 +35,10 @@ struct Args {
     /// chainid , [80001: polygon-mumbai testnet] , [97: polygon-pos mainnet], [137: bsc-testnet], [56: bsc-mainnet]
     #[arg(short, long)]
     chainid: u64,
+
+    /// env , test, uat, pro
+    #[arg(short, long)]
+    env: String,
 }
 
 #[tokio::main]
@@ -43,6 +48,24 @@ async fn main() -> anyhow::Result<()> {
     let chainid: u64 = args.chainid;
     let rpc_url = std::env::var(format!("RPC_URL_{chainid}")).unwrap();
     let contract_address = std::env::var(format!("FANSLAND_NFT_{chainid}")).unwrap();
+    let pk = match args.env.as_str() {
+        // 6c696ad29d0fbc55aca9ebc07395406e3c396d6ae4684182b99f60f23f7d9b36
+        // 0xDEe74737Aa7C9E75cc782419D97DE18Eb2918e81
+        "test" => hex::encode(Sha256::digest(
+            "fanslandweb3musicfestivalnftairdrop2024#001@test",
+        )),
+        // 2a6bb518db5e8e643b2c8ef472a0e958111687a1c48561426bfb604197292ab6
+        // 0x8d39F5882F1F49714612FF06328189aAc9915728
+        "uat" => hex::encode(Sha256::digest(
+            "fanslandweb3musicfestivalnftairdrop2024#001@uat",
+        )),
+        // bd1cd9fbe6705932f7252a4ccd177c1d59bd76c61973349621d780d9edf1a19d
+        // 0x7691cd47462D7659e69DAD7561878e2A31b41cfB
+        "pro" => hex::encode(Sha256::digest(
+            "fanslandweb3musicfestivalnftairdrop2024#001@pro",
+        )),
+        _ => panic!("无效chainid"),
+    };
 
     // tracing_subscriber::registry()
     //     .with(
@@ -69,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Running...");
     while r.load(Ordering::SeqCst) {
         // 更新积分排行榜
-        let err = airdrop_task(&rpc_url, &contract_address, chainid).await;
+        let err = airdrop_task(&rpc_url, &contract_address, chainid, pk.clone()).await;
         match err {
             Ok(_) => {}
             Err(e) => {
@@ -97,6 +120,7 @@ async fn airdrop_task(
     rpc_url: &String,
     contract_address: &String,
     chainid: u64,
+    pk: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("web2用户兑换门票, 空投NFT");
     let rds_url = std::env::var("REDIS_URL").unwrap();
@@ -226,6 +250,7 @@ async fn airdrop_task(
         type_id,
         recipient,
         token_id,
+        pk,
     )
     .await
     {
@@ -259,7 +284,20 @@ async fn airdrop(
     type_id: u64,
     recipient: String,
     token_id: u64,
+    pk: String,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    let pk = match chain_id {
+        80001 => "0xa1102aa1ecf406a2633bd227efc4ecd16aa5c642d3b85a606b7b20fad109a50d",
+        137 => "fanslandweb3musicfestivalnftairdrop2024#001@uat",
+        _ => {
+            tracing::info!("=====无效chain_id=====: {}", chain_id);
+            return Err(Box::new(std::io::Error::new(
+                ErrorKind::Other,
+                "无效chain_id",
+            )));
+        }
+    };
+
     tracing::info!(
         "开始空投===chainId:{}, contract:{}, type_id:{}, recipient:{}, token_id:{}",
         chain_id,
@@ -276,10 +314,7 @@ async fn airdrop(
     let provider = Provider::<Http>::try_from(rpc_url)?;
 
     // TODO: fix private key
-    let from_wallet: LocalWallet =
-        "0xa1102aa1ecf406a2633bd227efc4ecd16aa5c642d3b85a606b7b20fad109a50d"
-            .parse::<LocalWallet>()?
-            .with_chain_id(chain_id);
+    let from_wallet: LocalWallet = pk.parse::<LocalWallet>()?.with_chain_id(chain_id);
 
     let signer = Arc::new(SignerMiddleware::new(provider, from_wallet));
     tracing::info!("==================");
