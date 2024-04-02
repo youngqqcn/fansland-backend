@@ -508,8 +508,9 @@ pub async fn query_ticket_qrcode_by_address(
 
     tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
 
-    let fansland_nft_contract_address =
-        std::env::var(format!("FANSLAND_NFT_{}_{}", req.chainid, app_state.env)).unwrap();
+    let k = format!("FANSLAND_NFT_{}_{}", req.chainid, app_state.env);
+    tracing::debug!("k = {}", k);
+    let fansland_nft_contract_address = std::env::var(k).map_err(new_internal_error)?;
 
     let acc_type = match req.access_type {
         Some(x) => match x {
