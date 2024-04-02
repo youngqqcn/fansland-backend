@@ -64,7 +64,7 @@ async fn main() -> anyhow::Result<()> {
         "pro" => hex::encode(Sha256::digest(
             "fanslandweb3musicfestivalnftairdrop2024#001@pro",
         )),
-        _ => panic!("无效chainid"),
+        _ => panic!("无效env"),
     };
 
     // tracing_subscriber::registry()
@@ -286,18 +286,6 @@ async fn airdrop(
     token_id: u64,
     pk: String,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let pk = match chain_id {
-        80001 => "0xa1102aa1ecf406a2633bd227efc4ecd16aa5c642d3b85a606b7b20fad109a50d",
-        137 => "fanslandweb3musicfestivalnftairdrop2024#001@uat",
-        _ => {
-            tracing::info!("=====无效chain_id=====: {}", chain_id);
-            return Err(Box::new(std::io::Error::new(
-                ErrorKind::Other,
-                "无效chain_id",
-            )));
-        }
-    };
-
     tracing::info!(
         "开始空投===chainId:{}, contract:{}, type_id:{}, recipient:{}, token_id:{}",
         chain_id,
@@ -313,7 +301,6 @@ async fn airdrop(
     let contract_address: Address = contract_address.parse()?;
     let provider = Provider::<Http>::try_from(rpc_url)?;
 
-    // TODO: fix private key
     let from_wallet: LocalWallet = pk.parse::<LocalWallet>()?.with_chain_id(chain_id);
 
     let signer = Arc::new(SignerMiddleware::new(provider, from_wallet));
