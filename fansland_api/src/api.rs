@@ -157,3 +157,14 @@ pub struct QueryPointsRankResp {
     pub page_size: u32,
     pub rank: Vec<Rank>,
 }
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryWhitelistReq {
+    pub address: String,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct QueryWhitelistResp {
+    pub address: String,
+    pub is_whitelist: bool,
+}

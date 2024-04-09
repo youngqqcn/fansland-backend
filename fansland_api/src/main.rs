@@ -14,7 +14,7 @@ use dotenv::dotenv;
 
 use crate::handler::{
     bind_email, get_login_signmsg, get_ticket_qrcode_by_secret_link,
-    query_ticket_qrcode_by_address, query_user_by_address, sign_in_with_ethereum,
+    query_ticket_qrcode_by_address, query_user_by_address, query_whitelist, sign_in_with_ethereum,
     update_secret_link_passwd, AppState,
 };
 
@@ -83,6 +83,7 @@ async fn main() {
             post(get_ticket_qrcode_by_secret_link),
         )
         .route("/getSiweMsg", post(get_login_signmsg))
+        .route("/checkWhitelist", post(query_whitelist))
         .route("/signInWithEthereum", post(sign_in_with_ethereum));
 
     let app_routers = need_auth_routers
