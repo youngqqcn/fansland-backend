@@ -42,11 +42,11 @@ def main():
 
     # TODO: 修改成正式的票名
     typeid_maps = {
-        '0': "Early Bird 2 Days Ticket (May 4-5)",
-        '1': "Advance 2 Days Ticket (May 4-5)",
-        '2': "Regular 1 Day Ticket (May 4)",
-        '3': "Regular 1 Day Ticket (May 5)",
-        '4': "Regular 2 Days Ticket (May 4-5)",
+        '0': "Early Bird 2-Day Ticket (4-5 May)",
+        '1': "Advance 2-Day Ticket (4-5 May)",
+        '2': "Regular 1-Day Ticket (4 May)",
+        '3': "Regular 1-Day Ticket (5 May)",
+        '4': "Regular 2-Day Ticket (4-5 May)",
     }
 
 
