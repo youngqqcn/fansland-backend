@@ -185,7 +185,7 @@ pub async fn query_whitelist(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryWhitelistReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     // 使用redis
     let mut rds_conn = app_state
