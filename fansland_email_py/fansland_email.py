@@ -47,6 +47,18 @@ def main():
         '2': "Regular 1-Day Ticket (4 May)",
         '3': "Regular 1-Day Ticket (5 May)",
         '4': "Regular 2-Day Ticket (4-5 May)",
+
+
+        # VIP卡座票
+        '1003': 'Platinum Package(4-5 May)',
+        '1004': 'Platinum Package(4 May)',
+        '1005': 'Platinum Package(5 May)',
+        '1006': 'Diamond Package(4-5 May)',
+        '1007': 'Diamond Package(4 May)',
+        '1008': 'Diamond Package(5 May)',
+        '1009': 'Gold Package(4-5 May)',
+        '1010': 'Gold Package(4 May)',
+        '1011': 'Gold Package(5 May)',
     }
 
 
