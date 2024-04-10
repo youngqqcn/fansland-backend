@@ -14,16 +14,13 @@ start-openapi-pro:
 start-nft-pro:
 	cargo run --bin fansland_nft_ticket -r -- --env PRO --chainid 56 >> nft_ticket_56_pro.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --env PRO --chainid 204 >> nft_ticket_204_pro.log 2>&1 &
-	cargo run --bin fansland_nft_ticket -r -- --env PRO --chainid 137 >> nft_ticket_137_pro.log 2>&1 &
 
 start-nft-uat:
-	cargo run --bin fansland_nft_ticket -r -- --env UAT --chainid 137 >> nft_ticket_137_uat.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --env UAT --chainid 56 >> nft_ticket_56_uat.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r -- --env UAT --chainid 204 >> nft_ticket_204_uat.log 2>&1 &
 
 
 start-nft-test:
-	cargo run --bin fansland_nft_ticket -r --  --env TEST --chainid 80001 >> nft_ticket_80001_test.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r --  --env TEST --chainid 97 >> nft_ticket_97_test.log 2>&1 &
 	cargo run --bin fansland_nft_ticket -r --  --env TEST --chainid 5611 >> nft_ticket_5611_test.log 2>&1 &
 
