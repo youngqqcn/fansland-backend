@@ -23,6 +23,7 @@ def main():
     for w in whitelists:
         r.sadd("whitelists:advance:0410",  w)
         print('插入成功: {}'.format(w))
+    print('一共{}'.format(len(whitelists)))
     pass
 
 if __name__ == '__main__':
