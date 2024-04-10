@@ -9,7 +9,7 @@ start-api-main:
 
 #只在生产环境启动openapi
 start-openapi-pro:
-	cargo run --bin fansland_api  -r  >> openapi.log 2>&1 &
+	cargo run --bin fansland_openapi -r > openapi.log 2>&1 &
 
 start-nft-pro:
 	cargo run --bin fansland_nft_ticket -r -- --env PRO --chainid 56 >> nft_ticket_56_pro.log 2>&1 &
