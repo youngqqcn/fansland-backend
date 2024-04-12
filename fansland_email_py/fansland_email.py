@@ -47,6 +47,8 @@ def main():
         '2': "Regular 1-Day Ticket (4 May)",
         '3': "Regular 1-Day Ticket (5 May)",
         '4': "Regular 2-Day Ticket (4-5 May)",
+        '5': "Co-Host OKX WEB3(4-5 May)",
+        '6': "Fansland X OneKey(4-5 May)",
 
 
         # VIP卡座票
