@@ -52,12 +52,15 @@ def main():
 
 
         # VIP卡座票
+        '1000': 'Queen Package(4-5 May)',
+        '1001': 'Queen Package(4 May)',
+        '1002': 'Queen Package(5 May)',
         '1003': 'Platinum Package(4-5 May)',
         '1004': 'Platinum Package(4 May)',
         '1005': 'Platinum Package(5 May)',
-        '1006': 'Diamond Package(4-5 May)',
-        '1007': 'Diamond Package(4 May)',
-        '1008': 'Diamond Package(5 May)',
+        '1006': 'Silver Package(4-5 May)',
+        '1007': 'Silver Package(4 May)',
+        '1008': 'Silver Package(5 May)',
         '1009': 'Gold Package(4-5 May)',
         '1010': 'Gold Package(4 May)',
         '1011': 'Gold Package(5 May)',
