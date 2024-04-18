@@ -61,10 +61,15 @@ async fn main() {
     let client = Client::open(rds_url).unwrap();
     let redis_pool = RedisPool::from(client);
 
+
+    let env = args.env.to_uppercase();
+    let database_url = std::env::var(format!("DATABASE_URL_{env}")).unwrap();
+
     let app_state = AppState {
         rds_pool: redis_pool.clone(),
         web_domain: web_domain.to_owned(),
         env: args.env.to_uppercase(),
+        database_url: database_url,
     };
 
     // build our application with some routes

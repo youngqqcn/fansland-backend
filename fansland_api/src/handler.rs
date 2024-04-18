@@ -8,6 +8,7 @@ use chrono::Utc;
 use email_address::EmailAddress;
 use fansland_common::{jwt::JWTToken, RespVO};
 use serde_json::json;
+use sqlx::mysql::MySqlPoolOptions;
 
 use crate::{
     api::{
@@ -39,6 +40,7 @@ pub struct AppState {
     pub rds_pool: RedisPool<Client, Connection>,
     pub web_domain: String,
     pub env: String,
+    pub database_url: String,
 }
 
 // 获取积分排行榜
@@ -221,7 +223,7 @@ pub async fn query_whitelist(
 // 获取地址是否是白名单
 pub async fn ai_chat(
     // headers: HeaderMap,
-    // State(app_state): State<AppState>,
+    State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
@@ -293,11 +295,36 @@ pub async fn ai_chat(
         ));
     }
 
+    // 插入数据库
+    // mysql 数据库
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&app_state.database_url)
+        .await
+        .map_err(new_internal_error)?;
+
+    let content = rsp.content.unwrap_or(String::from(""));
+    let _ = sqlx::query!(
+        r#"
+            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, msg_type, user_id, content)
+            VALUES (?, ?, ?, ?, ?, ?)"#,
+            req.idol_id,
+        "msg_id",
+        "ref_msg_id",
+        "text",
+        "user_id",
+        content.clone(),
+    )
+    .execute(&pool)
+    .await.map_err(new_internal_error)?
+    .rows_affected();
+
     Ok(RespVO::from(&AIChatResp {
         address: req.address,
         idol_id: req.idol_id,
         language: req.language,
-        content: rsp.content.unwrap_or(String::from("")),
+        content: content,
     })
     .resp_json())
 }
