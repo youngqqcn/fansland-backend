@@ -169,11 +169,6 @@ pub struct QueryWhitelistResp {
     pub is_whitelist: bool,
 }
 
-#[derive(Deserialize, Clone, Debug, Serialize)]
-pub struct MsgBoy {
-    pub role: String,
-    pub content: String,
-}
 
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
@@ -181,7 +176,7 @@ pub struct AIChatReq {
     pub address: String,
     pub idol_id: u32,
     pub language: String,
-    pub messages: Vec<MsgBoy>,
+    pub message: String,
 }
 
 
@@ -194,10 +189,16 @@ pub struct AIChatResp {
 }
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct MsgBody {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct OpenloveReq{
     pub idol_id: u32,
     pub language: String,
-    pub messages: Vec<MsgBoy>,
+    pub messages: Vec<MsgBody>,
 }
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
@@ -209,3 +210,6 @@ pub struct OpenloveResp{
     pub success: bool,
     pub msg: String,
 }
+
+
+

@@ -4,20 +4,23 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json, Response},
 };
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use email_address::EmailAddress;
 use fansland_common::{jwt::JWTToken, RespVO};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::{mysql::MySqlPoolOptions};
+use uuid::Uuid;
 
 use crate::{
     api::{
         AIChatReq, AIChatResp, BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
-        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, OpenloveResp,
-        Point, QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp, QueryAddressPointsReq,
-        QueryAddressPointsResp, QueryAddressReq, QueryAddressResp, QueryPointsRankReq,
-        QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, QueryWhitelistReq,
-        QueryWhitelistResp, Rank, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
+        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, MsgBody,
+        OpenloveResp, Point, QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp,
+        QueryAddressPointsReq, QueryAddressPointsResp, QueryAddressReq, QueryAddressResp,
+        QueryPointsRankReq, QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp,
+        QueryWhitelistReq, QueryWhitelistResp, Rank, UpdateSecretLinkPasswdReq,
+        UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
 };
@@ -220,6 +223,19 @@ pub async fn query_whitelist(
     .resp_json())
 }
 
+#[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
+struct ChatHistory {
+    id: i64,
+    idol_id: i32,
+    msg_id: String,
+    ref_msg_id: String,
+    role: String,
+    user_id: String,
+    content: String,
+    // create_time: NaiveDateTime,
+    // update_time: NaiveDateTime,
+}
+
 // 获取地址是否是白名单
 pub async fn ai_chat(
     // headers: HeaderMap,
@@ -250,18 +266,68 @@ pub async fn ai_chat(
     //     tracing::info!("Sorry, {} 不是Advance-0410白名单地址", req.address);
     // }
 
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&app_state.database_url)
+        .await
+        .map_err(new_internal_error)?;
+    let msg_id = Uuid::new_v4().to_string();
+
     // 发起http请求
     let client = reqwest::Client::new();
 
-    // let mut req_body = HashMap::new();
-    // req_body.insert("idolId", 1);
-    // req_body.insert("language", "en");
+    // 将消息插入数据库
+    let _ = sqlx::query!(
+        r#"
+            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, user_id, content)
+            VALUES (?, ?, ?, ?, ?, ?)"#,
+        req.idol_id,
+        msg_id,
+        "",
+        "user",
+        req.address,
+        req.message.clone(),
+    )
+    .execute(&pool)
+    .await
+    .map_err(new_internal_error)?
+    .rows_affected();
+
+    // TODO: 获取最近10条消息记录,作为上下文, 且保证总的长度不超过 2000个字符
+    let data = sqlx::query!(
+        "SELECT *
+        FROM chat_history
+        WHERE user_id = ?
+        ORDER BY create_time DESC
+        LIMIT 10;",
+        req.address
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(new_internal_error)?;
+
+    tracing::info!("data: {:?}", data);
+
+    let mut messages: Vec<MsgBody> = Vec::new();
+    for d in data {
+        messages.insert(
+            0,
+            MsgBody {
+                role: d.role,
+                content: d.content.clone(),
+            },
+        );
+    }
 
     let req_json_body = json!({
         "idolId": req.idol_id,
         "language": req.language,
-        "message": req.messages
+
+        // 只保留最新消息
+        "message":messages
     });
+
+    tracing::info!("req_json: {}", req_json_body.to_string());
 
     let resp = client
         .post("https://openlove.fancyai.net/api/chat/send")
@@ -298,33 +364,29 @@ pub async fn ai_chat(
     // 插入数据库
     // mysql 数据库
 
-    let pool = MySqlPoolOptions::new()
-        .max_connections(5)
-        .connect(&app_state.database_url)
-        .await
-        .map_err(new_internal_error)?;
-
-    let content = rsp.content.unwrap_or(String::from(""));
+    // 将回复插入数据库
+    let rsp_content = rsp.content.unwrap_or(String::from(""));
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, msg_type, user_id, content)
+            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, user_id, content)
             VALUES (?, ?, ?, ?, ?, ?)"#,
-            req.idol_id,
-        "msg_id",
-        "ref_msg_id",
-        "text",
-        "user_id",
-        content.clone(),
+        req.idol_id,
+        Uuid::new_v4().to_string(),
+        msg_id,
+        "assistant",
+        req.address,
+        rsp_content.clone(),
     )
     .execute(&pool)
-    .await.map_err(new_internal_error)?
+    .await
+    .map_err(new_internal_error)?
     .rows_affected();
 
     Ok(RespVO::from(&AIChatResp {
         address: req.address,
         idol_id: req.idol_id,
         language: req.language,
-        content: content,
+        content: rsp_content.clone(),
     })
     .resp_json())
 }

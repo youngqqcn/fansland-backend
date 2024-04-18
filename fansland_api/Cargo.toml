@@ -31,14 +31,19 @@ hex = { version = "0.4.3", features = ["serde"] }
 redis = { version = "0.24.0", features = ["tokio-comp"] }
 redis_pool = "0.3"
 
-fansland_common = { path = "../fansland_common" }
-jsonwebtoken = "9.2.0"
-uuid = { version = "1.6.1", features = ["v4"] }
+uuid = { version = "1.8.0", features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+] }
+
 rand = "0.8.5"
 base64-url = "2.0.2"
 blake3 = "1.5.0"
 email_address = "0.2.4"
 clap = { version = "4.4.18", features = ["derive"] }
-reqwest = {version="0.12.3", features = ["json"]}
+reqwest = { version = "0.12.3", features = ["json"] }
 
-sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-rustls", "mysql" ] }
+sqlx = { version = "0.7", features = [ "runtime-tokio", "tls-rustls", "mysql", "time" ] }
+fansland_common = { path = "../fansland_common" }
+jsonwebtoken = "9.2.0"
