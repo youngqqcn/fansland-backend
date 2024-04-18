@@ -192,3 +192,20 @@ pub struct AIChatResp {
     pub language: String,
     pub content: String,
 }
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct OpenloveReq{
+    pub idol_id: u32,
+    pub language: String,
+    pub messages: Vec<MsgBoy>,
+}
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct OpenloveResp{
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+
+    pub code: u32,
+    pub success: bool,
+    pub msg: String,
+}

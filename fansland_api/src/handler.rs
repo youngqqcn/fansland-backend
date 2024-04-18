@@ -7,12 +7,13 @@ use axum::{
 use chrono::Utc;
 use email_address::EmailAddress;
 use fansland_common::{jwt::JWTToken, RespVO};
+use serde_json::json;
 
 use crate::{
     api::{
         AIChatReq, AIChatResp, BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
-        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, Point,
-        QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp, QueryAddressPointsReq,
+        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, OpenloveResp,
+        Point, QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp, QueryAddressPointsReq,
         QueryAddressPointsResp, QueryAddressReq, QueryAddressResp, QueryPointsRankReq,
         QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, QueryWhitelistReq,
         QueryWhitelistResp, Rank, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
@@ -23,6 +24,7 @@ use ethers::types::{Address, Signature};
 use rand::Rng;
 use redis_pool::{connection::RedisPoolConnection, RedisPool};
 use std::{
+    collections::HashMap,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -218,8 +220,8 @@ pub async fn query_whitelist(
 
 // 获取地址是否是白名单
 pub async fn ai_chat(
-    headers: HeaderMap,
-    State(app_state): State<AppState>,
+    // headers: HeaderMap,
+    // State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
@@ -246,11 +248,56 @@ pub async fn ai_chat(
     //     tracing::info!("Sorry, {} 不是Advance-0410白名单地址", req.address);
     // }
 
+    // 发起http请求
+    let client = reqwest::Client::new();
+
+    // let mut req_body = HashMap::new();
+    // req_body.insert("idolId", 1);
+    // req_body.insert("language", "en");
+
+    let req_json_body = json!({
+        "idolId": req.idol_id,
+        "language": req.language,
+        "message": req.messages
+    });
+
+    let resp = client
+        .post("https://openlove.fancyai.net/api/chat/send")
+        .json(&req_json_body)
+        .send()
+        .await
+        .map_err(new_internal_error)?;
+
+    let rsp: OpenloveResp = resp.json().await.map_err(new_internal_error)?;
+
+    let mut err_msg_map = HashMap::new();
+    err_msg_map.insert(1, String::from("role is not exists"));
+    err_msg_map.insert(2, String::from("upstream request failed"));
+    err_msg_map.insert(3, String::from("upstream server occured error"));
+    err_msg_map.insert(4, String::from("empty message is not permitted"));
+
+    if rsp.code != 0 {
+        tracing::error!("请求错误, code:{}, msg:{}", rsp.code, rsp.msg);
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(20000 + rsp.code as i32),
+                msg: Some(
+                    err_msg_map
+                        .get(&rsp.code)
+                        .unwrap_or(&String::from("unknow upstream error"))
+                        .clone(),
+                ),
+                data: None,
+            }),
+        ));
+    }
+
     Ok(RespVO::from(&AIChatResp {
         address: req.address,
         idol_id: req.idol_id,
         language: req.language,
-        content: "TODO".to_owned(),
+        content: rsp.content.unwrap_or(String::from("")),
     })
     .resp_json())
 }
