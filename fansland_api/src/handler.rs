@@ -10,7 +10,7 @@ use fansland_common::{jwt::JWTToken, RespVO};
 
 use crate::{
     api::{
-        BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
+        AIChatReq, AIChatResp, BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
         GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, Point,
         QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp, QueryAddressPointsReq,
         QueryAddressPointsResp, QueryAddressReq, QueryAddressResp, QueryPointsRankReq,
@@ -212,6 +212,45 @@ pub async fn query_whitelist(
     Ok(RespVO::from(&QueryWhitelistResp {
         address: req.address,
         is_whitelist: is_whitelist,
+    })
+    .resp_json())
+}
+
+// 获取地址是否是白名单
+pub async fn ai_chat(
+    headers: HeaderMap,
+    State(app_state): State<AppState>,
+    JsonReq(req): JsonReq<AIChatReq>,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+
+    // 使用redis
+    // let mut rds_conn = app_state
+    //     .rds_pool
+    //     .aquire()
+    //     .await
+    //     .map_err(new_internal_error)?;
+
+    // let redeemaddress_key = "whitelists:advance:0410";
+    // let member = format!("{}", req.address.to_lowercase());
+    // let is_redeem_ret: Vec<u64> = redis::pipe()
+    //     .sismember(redeemaddress_key, member)
+    //     .query_async(&mut rds_conn)
+    //     .await
+    //     .map_err(new_internal_error)?;
+
+    // let is_whitelist = is_redeem_ret[0] == 1;
+    // if is_whitelist {
+    //     tracing::info!("Ok, {} 是Advance-0410白名单地址", req.address);
+    // } else {
+    //     tracing::info!("Sorry, {} 不是Advance-0410白名单地址", req.address);
+    // }
+
+    Ok(RespVO::from(&AIChatResp {
+        address: req.address,
+        idol_id: req.idol_id,
+        language: req.language,
+        content: "TODO".to_owned(),
     })
     .resp_json())
 }

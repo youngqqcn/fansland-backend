@@ -168,3 +168,27 @@ pub struct QueryWhitelistResp {
     pub address: String,
     pub is_whitelist: bool,
 }
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct MsgBoy {
+    pub role: String,
+    pub content: String,
+}
+
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct AIChatReq {
+    pub address: String,
+    pub idol_id: u32,
+    pub language: String,
+    pub messages: Vec<MsgBoy>,
+}
+
+
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct AIChatResp {
+    pub address: String,
+    pub idol_id: u32,
+    pub language: String,
+    pub content: String,
+}
