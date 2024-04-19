@@ -4,7 +4,8 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json, Response},
 };
-use chrono::{Date, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
+// use chrono::{NaiveDateTime, Utc};
 use email_address::EmailAddress;
 use fansland_common::{jwt::JWTToken, RespVO};
 use serde::{Deserialize, Serialize};
@@ -232,8 +233,8 @@ struct ChatHistory {
     role: String,
     address: String,
     content: String,
-    // create_time: DateTime,
-    // update_time: DateTime,
+    create_time: DateTime<Utc>,
+    update_time: DateTime<Utc>,
 }
 
 // 获取地址是否是白名单
@@ -498,10 +499,7 @@ pub async fn query_chat_history(
             role: d.role,
             ref_msg_id: d.ref_msg_id,
             content: d.content.clone(),
-            timestamp: String::from(""), // timestamp: match d.create_time {
-                                         //     Some(x) => x.to_string(),
-                                         //     None => String::from(""),
-                                         // },
+            timestamp: d.create_time.to_rfc3339(),
         });
     }
 
