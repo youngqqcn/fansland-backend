@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT *\n        FROM chat_history\n        WHERE idol_id = ? and user_id = ?\n        ORDER BY create_time DESC\n        LIMIT 10;",
+  "query": "SELECT *\n        FROM chat_history\n        WHERE idol_id = ? and address = ?\n        ORDER BY create_time DESC\n        LIMIT 10;",
   "describe": {
     "columns": [
       {
@@ -55,7 +55,7 @@
       },
       {
         "ordinal": 5,
-        "name": "user_id",
+        "name": "address",
         "type_info": {
           "type": "VarString",
           "flags": "NOT_NULL | NO_DEFAULT_VALUE",
@@ -109,5 +109,5 @@
       true
     ]
   },
-  "hash": "b6bede18e6b7ded6ab74f65c210f47a7871c594fa9387ef04158ae85f1c4d518"
+  "hash": "ca95f0b66f6091b5d9a0670edf6538df4feb910e1b4d2f9584b5f4729d14296b"
 }

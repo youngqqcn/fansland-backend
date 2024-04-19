@@ -279,7 +279,7 @@ pub async fn ai_chat(
     // 将消息插入数据库
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, user_id, content)
+            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content)
             VALUES (?, ?, ?, ?, ?, ?)"#,
         req.idol_id,
         msg_id,
@@ -297,7 +297,7 @@ pub async fn ai_chat(
     let data = sqlx::query!(
         "SELECT *
         FROM chat_history
-        WHERE idol_id = ? and user_id = ?
+        WHERE idol_id = ? and address = ?
         ORDER BY create_time DESC
         LIMIT 10;",
         req.idol_id,
@@ -369,7 +369,7 @@ pub async fn ai_chat(
     let rsp_content = rsp.content.unwrap_or(String::from(""));
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, user_id, content)
+            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content)
             VALUES (?, ?, ?, ?, ?, ?)"#,
         req.idol_id,
         Uuid::new_v4().to_string(),
