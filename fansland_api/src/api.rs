@@ -186,6 +186,8 @@ pub struct AIChatResp {
     pub address: String,
     pub idol_id: u32,
     pub language: String,
+    pub msg_id: String,
+    pub ref_msg_id: String,
     pub content: String,
 }
 
@@ -227,6 +229,7 @@ pub struct AIChatHistoryReq {
 
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct HistoryChatMsgBody {
+    pub no: i64,
     pub msg_id: String,
     pub idol_id: u32,
     pub role: String,

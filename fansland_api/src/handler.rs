@@ -409,13 +409,14 @@ pub async fn ai_chat(
     // mysql 数据库
 
     // 将回复插入数据库
+    let reply_msg_id = Uuid::new_v4().to_string();
     let rsp_content = rsp.content.unwrap_or(String::from(""));
     let _ = sqlx::query!(
         r#"
             INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content)
             VALUES (?, ?, ?, ?, ?, ?)"#,
         req.idol_id,
-        Uuid::new_v4().to_string(),
+        reply_msg_id.clone(),
         msg_id,
         "assistant",
         req.address,
@@ -447,9 +448,11 @@ pub async fn ai_chat(
     .rows_affected();
 
     Ok(RespVO::from(&AIChatResp {
+        language: req.language,
         address: req.address,
         idol_id: req.idol_id,
-        language: req.language,
+        msg_id: reply_msg_id,
+        ref_msg_id: msg_id.clone(),
         content: rsp_content.clone(),
     })
     .resp_json())
@@ -494,6 +497,7 @@ pub async fn query_chat_history(
     let mut messages: Vec<HistoryChatMsgBody> = Vec::new();
     for d in data {
         messages.push(HistoryChatMsgBody {
+            no: d.id,
             msg_id: d.msg_id,
             idol_id: d.idol_id as u32,
             role: d.role,
