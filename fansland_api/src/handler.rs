@@ -341,7 +341,7 @@ pub async fn ai_chat(
         .map_err(new_internal_error)?;
     let msg_id = Uuid::new_v4().to_string();
 
-    // TODO: 查询积分消耗配置表
+    // 查询积分消耗配置表
     tracing::info!("=====查询积分消耗配置表");
 
     let query_chat_cfg_ret = sqlx::query!(
