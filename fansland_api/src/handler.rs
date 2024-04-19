@@ -507,9 +507,9 @@ pub async fn query_chat_history(
         address: req.address.clone(),
         idol_id: req.idol_id,
         language: req.language,
-        page: 0,
-        page_size: 0,
-        total_count: 0,
+        page: req.page,
+        page_size: req.page_size,
+        // total_count: 0,
         history_messages: messages,
     })
     .resp_json())

@@ -243,6 +243,6 @@ pub struct AIChatHistoryResp {
     pub language: String,
     pub page: u32,
     pub page_size: u32,
-    pub total_count: u32,
+    // pub total_count: u32,
     pub history_messages: Vec<HistoryChatMsgBody>,
 }
