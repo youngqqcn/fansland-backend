@@ -484,7 +484,7 @@ pub async fn ai_chat(
     let resp = client
         .post("https://openlove.fancyai.net/api/chat/send")
         .json(&req_json_body)
-        .timeout(Duration::new(10, 0)) // 超时时间 10s
+        .timeout(Duration::new(60, 0)) // 超时时间 60s
         .send()
         .await
         .map_err(new_internal_error)?;
