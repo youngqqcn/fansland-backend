@@ -13,7 +13,7 @@ use tracing::{warn, Level};
 use dotenv::dotenv;
 
 use crate::handler::{
-    ai_chat, bind_email, get_login_signmsg, get_ticket_qrcode_by_secret_link,
+    ai_chat, bind_email, get_login_signmsg, get_ticket_qrcode_by_secret_link, query_chat_history,
     query_ticket_qrcode_by_address, query_user_by_address, query_whitelist, sign_in_with_ethereum,
     update_secret_link_passwd, AppState,
 };
@@ -61,7 +61,6 @@ async fn main() {
     let client = Client::open(rds_url).unwrap();
     let redis_pool = RedisPool::from(client);
 
-
     let env = args.env.to_uppercase();
     let database_url = std::env::var(format!("DATABASE_URL_{env}")).unwrap();
 
@@ -81,6 +80,7 @@ async fn main() {
             post(query_ticket_qrcode_by_address),
         )
         .route("/idolChat", post(ai_chat))
+        .route("/queryChatHistory", post(query_chat_history))
         .route("/updateSlink", post(update_secret_link_passwd));
 
     let noneed_auth_routers = Router::new()

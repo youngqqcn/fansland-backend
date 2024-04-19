@@ -158,19 +158,20 @@ pub struct QueryPointsRankResp {
     pub rank: Vec<Rank>,
 }
 
+// 检查白名单请求
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct QueryWhitelistReq {
     pub address: String,
 }
 
+// 检查白名单响应
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct QueryWhitelistResp {
     pub address: String,
     pub is_whitelist: bool,
 }
 
-
-
+// AI聊天请求
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct AIChatReq {
     pub address: String,
@@ -179,7 +180,7 @@ pub struct AIChatReq {
     pub message: String,
 }
 
-
+// AI聊天响应
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct AIChatResp {
     pub address: String,
@@ -194,15 +195,17 @@ pub struct MsgBody {
     pub content: String,
 }
 
+// 请求 openlove
 #[derive(Deserialize, Clone, Debug, Serialize)]
-pub struct OpenloveReq{
+pub struct OpenloveReq {
     pub idol_id: u32,
     pub language: String,
     pub messages: Vec<MsgBody>,
 }
 
+// openlove的响应
 #[derive(Deserialize, Clone, Debug, Serialize)]
-pub struct OpenloveResp{
+pub struct OpenloveResp {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
 
@@ -211,5 +214,35 @@ pub struct OpenloveResp{
     pub msg: String,
 }
 
+// 查询历史聊天记录
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct AIChatHistoryReq {
+    pub address: String,
+    pub idol_id: u32,
+    pub language: String,
+    pub page: u32,
+    pub page_size: u32,
+}
 
 
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct HistoryChatMsgBody {
+    pub msg_id: String,
+    pub idol_id: u32,
+    pub role: String,
+    pub ref_msg_id: String, // 如果是AI的回复,此字段就是指向用户的发起的msg_id
+    pub content: String,
+    pub timestamp: String,
+}
+
+// 查询历史聊天记录响应
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct AIChatHistoryResp {
+    pub address: String,
+    pub idol_id: u32,
+    pub language: String,
+    pub page: u32,
+    pub page_size: u32,
+    pub total_count: u32,
+    pub history_messages: Vec<HistoryChatMsgBody>,
+}

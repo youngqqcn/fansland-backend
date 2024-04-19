@@ -4,7 +4,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json, Response},
 };
-use chrono::{NaiveDateTime, Utc};
+use chrono::{Date, NaiveDateTime, Utc};
 use email_address::EmailAddress;
 use fansland_common::{jwt::JWTToken, RespVO};
 use serde::{Deserialize, Serialize};
@@ -14,13 +14,13 @@ use uuid::Uuid;
 
 use crate::{
     api::{
-        AIChatReq, AIChatResp, BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
-        GetTicketQrCodeBySecretTokenReq, LoginByAddressReq, LoginByAddressResp, MsgBody,
-        OpenloveResp, Point, QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp,
-        QueryAddressPointsReq, QueryAddressPointsResp, QueryAddressReq, QueryAddressResp,
-        QueryPointsRankReq, QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp,
-        QueryWhitelistReq, QueryWhitelistResp, Rank, UpdateSecretLinkPasswdReq,
-        UpdateSecretLinkPasswdResp,
+        AIChatHistoryReq, AIChatHistoryResp, AIChatReq, AIChatResp, BindEmailReq, BindEmailResp,
+        GetLoginNonceReq, GetLoginNonceResp, GetTicketQrCodeBySecretTokenReq, HistoryChatMsgBody,
+        LoginByAddressReq, LoginByAddressResp, MsgBody, OpenloveResp, Point,
+        QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp, QueryAddressPointsReq,
+        QueryAddressPointsResp, QueryAddressReq, QueryAddressResp, QueryPointsRankReq,
+        QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, QueryWhitelistReq,
+        QueryWhitelistResp, Rank, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
 };
@@ -230,10 +230,10 @@ struct ChatHistory {
     msg_id: String,
     ref_msg_id: String,
     role: String,
-    user_id: String,
+    address: String,
     content: String,
-    // create_time: NaiveDateTime,
-    // update_time: NaiveDateTime,
+    // create_time: DateTime,
+    // update_time: DateTime,
 }
 
 // 获取地址是否是白名单
@@ -450,6 +450,69 @@ pub async fn ai_chat(
         idol_id: req.idol_id,
         language: req.language,
         content: rsp_content.clone(),
+    })
+    .resp_json())
+}
+
+// 获取地址是否是白名单
+pub async fn query_chat_history(
+    // headers: HeaderMap,
+    State(app_state): State<AppState>,
+    JsonReq(req): JsonReq<AIChatHistoryReq>,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&app_state.database_url)
+        .await
+        .map_err(new_internal_error)?;
+
+    let limit = if req.page_size > 0 { req.page_size } else { 10 };
+    let offset = req.page * req.page_size;
+
+    // 分页获取历史消息
+    let query = sqlx::query_as::<_, ChatHistory>(
+        "SELECT *
+        FROM chat_history
+        WHERE idol_id = ? and address = ?
+        ORDER BY create_time DESC
+        LIMIT ?
+        OFFSET ?
+        ;",
+    )
+    .bind(req.idol_id)
+    .bind(req.address.clone())
+    .bind(limit)
+    .bind(offset);
+
+    let data = query.fetch_all(&pool).await.map_err(new_internal_error)?;
+
+    tracing::info!("data: {:?}", data);
+
+    let mut messages: Vec<HistoryChatMsgBody> = Vec::new();
+    for d in data {
+        messages.push(HistoryChatMsgBody {
+            msg_id: d.msg_id,
+            idol_id: d.idol_id as u32,
+            role: d.role,
+            ref_msg_id: d.ref_msg_id,
+            content: d.content.clone(),
+            timestamp: String::from(""), // timestamp: match d.create_time {
+                                         //     Some(x) => x.to_string(),
+                                         //     None => String::from(""),
+                                         // },
+        });
+    }
+
+    Ok(RespVO::from(&AIChatHistoryResp {
+        address: req.address.clone(),
+        idol_id: req.idol_id,
+        language: req.language,
+        page: 0,
+        page_size: 0,
+        total_count: 0,
+        history_messages: messages,
     })
     .resp_json())
 }
