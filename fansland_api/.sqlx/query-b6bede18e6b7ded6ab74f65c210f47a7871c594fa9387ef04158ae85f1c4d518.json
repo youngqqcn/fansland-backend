@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT *\n        FROM chat_history\n        WHERE user_id = ?\n        ORDER BY create_time DESC\n        LIMIT 10;",
+  "query": "SELECT *\n        FROM chat_history\n        WHERE idol_id = ? and user_id = ?\n        ORDER BY create_time DESC\n        LIMIT 10;",
   "describe": {
     "columns": [
       {
@@ -38,7 +38,7 @@
         "name": "ref_msg_id",
         "type_info": {
           "type": "VarString",
-          "flags": "UNIQUE_KEY",
+          "flags": "",
           "char_set": 224,
           "max_size": 400
         }
@@ -95,7 +95,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -109,5 +109,5 @@
       true
     ]
   },
-  "hash": "c861a3289dff76ce9f8382027dcb223e87354fc501824029a1517b1281fdae40"
+  "hash": "b6bede18e6b7ded6ab74f65c210f47a7871c594fa9387ef04158ae85f1c4d518"
 }

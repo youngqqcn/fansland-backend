@@ -297,9 +297,10 @@ pub async fn ai_chat(
     let data = sqlx::query!(
         "SELECT *
         FROM chat_history
-        WHERE user_id = ?
+        WHERE idol_id = ? and user_id = ?
         ORDER BY create_time DESC
         LIMIT 10;",
+        req.idol_id,
         req.address
     )
     .fetch_all(&pool)
@@ -323,7 +324,7 @@ pub async fn ai_chat(
         "idolId": req.idol_id,
         "language": req.language,
 
-        // 只保留最新消息
+        // 只保留最新10条消息
         "message":messages
     });
 
