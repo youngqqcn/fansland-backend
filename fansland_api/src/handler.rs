@@ -31,7 +31,7 @@ use redis_pool::{connection::RedisPoolConnection, RedisPool};
 use std::{
     collections::HashMap,
     str::FromStr,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use redis::{aio::Connection, Client};
@@ -245,28 +245,6 @@ pub async fn ai_chat(
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
     // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
-    // 使用redis
-    // let mut rds_conn = app_state
-    //     .rds_pool
-    //     .aquire()
-    //     .await
-    //     .map_err(new_internal_error)?;
-
-    // let redeemaddress_key = "whitelists:advance:0410";
-    // let member = format!("{}", req.address.to_lowercase());
-    // let is_redeem_ret: Vec<u64> = redis::pipe()
-    //     .sismember(redeemaddress_key, member)
-    //     .query_async(&mut rds_conn)
-    //     .await
-    //     .map_err(new_internal_error)?;
-
-    // let is_whitelist = is_redeem_ret[0] == 1;
-    // if is_whitelist {
-    //     tracing::info!("Ok, {} 是Advance-0410白名单地址", req.address);
-    // } else {
-    //     tracing::info!("Sorry, {} 不是Advance-0410白名单地址", req.address);
-    // }
-
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
         .connect(&app_state.database_url)
@@ -274,13 +252,15 @@ pub async fn ai_chat(
         .map_err(new_internal_error)?;
     let msg_id = Uuid::new_v4().to_string();
 
-    // 发起http请求
-    let client = reqwest::Client::new();
-
     // TODO: 查询积分消耗配置表
-    let cft_chat_point_consume = 10;
+    let cfg_chat_point_consume = 10; // 聊天一次消耗, 10 积分
+    let cfg_chat_base_fee_rate = 1000; // 1000 / 10000,  即 10%
+                                       // let cfg_chat_idol_pool_rate = 10000 - cfg_chat_base_fee_rate; // 9000 / 10000 , 即 90%
+    let base_fee_points = cfg_chat_base_fee_rate * cfg_chat_point_consume / 10000; // 平台的积分抽水
+    let idol_pool_points = cfg_chat_point_consume - base_fee_points; //cfg_chat_idol_pool_rate * cfg_chat_point_consume / 10000; // 进入偶像积分池的积分
 
     // 查询用户积分余额是否足够
+    tracing::info!("=====查询用户积分余额");
     let query_balance_ret = sqlx::query!(
         "SELECT *
         FROM user_integral_wallet
@@ -297,16 +277,16 @@ pub async fn ai_chat(
         0
     };
     tracing::info!(
-        "用户:{:?} , 积分余额:{:?}",
+        "=====用户:{:?} , 积分余额:{:?}",
         req.address,
         user_points_balance
     );
 
-    if user_points_balance < cft_chat_point_consume {
+    if user_points_balance < cfg_chat_point_consume {
         tracing::error!(
             "用户积分余额:{}, 不足聊天积分消耗:{}",
             user_points_balance,
-            cft_chat_point_consume
+            cfg_chat_point_consume
         );
         return Err((
             StatusCode::BAD_REQUEST,
@@ -320,6 +300,7 @@ pub async fn ai_chat(
     // TODO: 锁定用户余额
 
     // 将消息插入数据库
+    tracing::info!("=====将消息插入数据库");
     let _ = sqlx::query!(
         r#"
             INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content)
@@ -336,7 +317,8 @@ pub async fn ai_chat(
     .map_err(new_internal_error)?
     .rows_affected();
 
-    // TODO: 获取最近10条消息记录,作为上下文, 且保证总的长度不超过 2000个字符
+    // 获取最近10条消息记录,作为上下文, 且保证总的长度不超过 2000个字符
+    tracing::info!("=====获取最新的10条消息记录,作为聊天的上下文");
     let data = sqlx::query!(
         "SELECT *
         FROM chat_history
@@ -371,11 +353,13 @@ pub async fn ai_chat(
         "message":messages
     });
 
-    tracing::info!("req_json: {}", req_json_body.to_string());
-
+    tracing::info!("====openlove请求参数: {}", req_json_body.to_string());
+    // 发起http请求
+    let client = reqwest::Client::new();
     let resp = client
         .post("https://openlove.fancyai.net/api/chat/send")
         .json(&req_json_body)
+        .timeout(Duration::new(10, 0)) // 超时时间 10s
         .send()
         .await
         .map_err(new_internal_error)?;
@@ -405,10 +389,8 @@ pub async fn ai_chat(
         ));
     }
 
-    // 插入数据库
-    // mysql 数据库
-
     // 将回复插入数据库
+    tracing::info!("=====将回复插入数据库=====");
     let reply_msg_id = Uuid::new_v4().to_string();
     let rsp_content = rsp.content.unwrap_or(String::from(""));
     let _ = sqlx::query!(
@@ -427,7 +409,8 @@ pub async fn ai_chat(
     .map_err(new_internal_error)?
     .rows_affected();
 
-    // 扣减积分, ()
+    // 扣减积分
+    tracing::info!("=====扣减积分=====");
     let _ = sqlx::query!(
         r#"
             UPDATE user_integral_wallet
@@ -438,9 +421,28 @@ pub async fn ai_chat(
             AND
             balance >= ?
             "#,
-        cft_chat_point_consume,
+        cfg_chat_point_consume,
         req.address,
-        cft_chat_point_consume
+        cfg_chat_point_consume
+    )
+    .execute(&pool)
+    .await
+    .map_err(new_internal_error)?
+    .rows_affected();
+
+    // 插入积分消耗记录
+    tracing::info!("=====插入积分消耗记录======");
+    let _ = sqlx::query!(
+        r#"
+            INSERT IGNORE INTO ai_idol_point_record (id, idol_id, amount, address, base_fee, idol_pool_fee, trans_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
+        msg_id.clone(),
+        req.idol_id,
+        cfg_chat_point_consume, // 消耗的积分
+        req.address,
+        base_fee_points, // 平台手续费获得的积分
+        idol_pool_points, // 偶像积分池的积分
+        11, // 聊天消耗
     )
     .execute(&pool)
     .await

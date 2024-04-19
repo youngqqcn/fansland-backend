@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT IGNORE INTO ai_idol_point_record (id, idol_id, amount, address, base_fee, idol_pool_fee, trans_type)\n            VALUES (?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "45bc3cdc0065872d880d1e1dd8325799c5f39e3b442ba205ccc365a457e2949c"
+}
