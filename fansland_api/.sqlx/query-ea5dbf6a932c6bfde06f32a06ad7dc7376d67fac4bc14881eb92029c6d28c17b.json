@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            UPDATE user_integral_wallet\n            SET\n            balance = balance - ?\n            WHERE\n            address = ?\n            AND\n            balance >= ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "ea5dbf6a932c6bfde06f32a06ad7dc7376d67fac4bc14881eb92029c6d28c17b"
+}

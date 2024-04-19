@@ -9,7 +9,7 @@ use email_address::EmailAddress;
 use fansland_common::{jwt::JWTToken, RespVO};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{mysql::MySqlPoolOptions};
+use sqlx::mysql::MySqlPoolOptions;
 use uuid::Uuid;
 
 use crate::{
@@ -276,6 +276,48 @@ pub async fn ai_chat(
     // 发起http请求
     let client = reqwest::Client::new();
 
+    // TODO: 查询积分消耗配置表
+    let cft_chat_point_consume = 10;
+
+    // 查询用户积分余额是否足够
+    let query_balance_ret = sqlx::query!(
+        "SELECT *
+        FROM user_integral_wallet
+        WHERE address = ? ",
+        req.address
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(new_internal_error)?;
+
+    let user_points_balance = if query_balance_ret.len() > 0 {
+        query_balance_ret[0].balance.unwrap_or(0)
+    } else {
+        0
+    };
+    tracing::info!(
+        "用户:{:?} , 积分余额:{:?}",
+        req.address,
+        user_points_balance
+    );
+
+    if user_points_balance < cft_chat_point_consume {
+        tracing::error!(
+            "用户积分余额:{}, 不足聊天积分消耗:{}",
+            user_points_balance,
+            cft_chat_point_consume
+        );
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(RespVO::<String> {
+                code: Some(20010),
+                msg: Some(String::from("points is not enough")),
+                data: None,
+            }),
+        ));
+    }
+    // TODO: 锁定用户余额
+
     // 将消息插入数据库
     let _ = sqlx::query!(
         r#"
@@ -377,6 +419,26 @@ pub async fn ai_chat(
         "assistant",
         req.address,
         rsp_content.clone(),
+    )
+    .execute(&pool)
+    .await
+    .map_err(new_internal_error)?
+    .rows_affected();
+
+    // 扣减积分, ()
+    let _ = sqlx::query!(
+        r#"
+            UPDATE user_integral_wallet
+            SET
+            balance = balance - ?
+            WHERE
+            address = ?
+            AND
+            balance >= ?
+            "#,
+        cft_chat_point_consume,
+        req.address,
+        cft_chat_point_consume
     )
     .execute(&pool)
     .await
