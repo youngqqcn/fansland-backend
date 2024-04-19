@@ -13,9 +13,7 @@ use tracing::{warn, Level};
 use dotenv::dotenv;
 
 use crate::handler::{
-    ai_chat, bind_email, get_login_signmsg, get_ticket_qrcode_by_secret_link, query_chat_history,
-    query_ticket_qrcode_by_address, query_user_by_address, query_whitelist, sign_in_with_ethereum,
-    update_secret_link_passwd, AppState,
+    ai_chat, bind_email, get_login_signmsg, get_ticket_qrcode_by_secret_link, query_chat_config, query_chat_history, query_ticket_qrcode_by_address, query_user_by_address, query_whitelist, sign_in_with_ethereum, update_secret_link_passwd, AppState
 };
 
 mod api;
@@ -80,6 +78,7 @@ async fn main() {
             post(query_ticket_qrcode_by_address),
         )
         .route("/idolChat", post(ai_chat))
+        .route("/queryChatFeeConfig", post(query_chat_config))
         .route("/queryChatHistory", post(query_chat_history))
         .route("/updateSlink", post(update_secret_link_passwd));
 

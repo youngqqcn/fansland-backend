@@ -15,13 +15,14 @@ use uuid::Uuid;
 
 use crate::{
     api::{
-        AIChatHistoryReq, AIChatHistoryResp, AIChatReq, AIChatResp, BindEmailReq, BindEmailResp,
-        GetLoginNonceReq, GetLoginNonceResp, GetTicketQrCodeBySecretTokenReq, HistoryChatMsgBody,
-        LoginByAddressReq, LoginByAddressResp, MsgBody, OpenloveResp, Point,
-        QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp, QueryAddressPointsReq,
-        QueryAddressPointsResp, QueryAddressReq, QueryAddressResp, QueryPointsRankReq,
-        QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp, QueryWhitelistReq,
-        QueryWhitelistResp, Rank, UpdateSecretLinkPasswdReq, UpdateSecretLinkPasswdResp,
+        AIChatConfigReq, AIChatConfigResp, AIChatHistoryReq, AIChatHistoryResp, AIChatReq,
+        AIChatResp, BindEmailReq, BindEmailResp, GetLoginNonceReq, GetLoginNonceResp,
+        GetTicketQrCodeBySecretTokenReq, HistoryChatMsgBody, LoginByAddressReq, LoginByAddressResp,
+        MsgBody, OpenloveResp, Point, QueryAddressPointsHistoryReq, QueryAddressPointsHistoryResp,
+        QueryAddressPointsReq, QueryAddressPointsResp, QueryAddressReq, QueryAddressResp,
+        QueryPointsRankReq, QueryPointsRankResp, QueryTicketQrCodeReq, QueryTicketQrCodeResp,
+        QueryWhitelistReq, QueryWhitelistResp, Rank, UpdateSecretLinkPasswdReq,
+        UpdateSecretLinkPasswdResp,
     },
     extract::JsonReq,
 };
@@ -237,6 +238,94 @@ struct ChatHistory {
     update_time: DateTime<Utc>,
 }
 
+#[derive(Debug, Deserialize)]
+struct ChatConfig {
+    chat_points: u64,
+    base_fee: u64,
+
+    #[allow(dead_code)]
+    idol_pool_fee: u64,
+}
+
+// 获取地址是否是白名单
+pub async fn query_chat_config(
+    // headers: HeaderMap,
+    State(app_state): State<AppState>,
+    JsonReq(req): JsonReq<AIChatConfigReq>,
+) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+
+    let pool = MySqlPoolOptions::new()
+        .max_connections(5)
+        .connect(&app_state.database_url)
+        .await
+        .map_err(new_internal_error)?;
+
+    // TODO: 查询积分消耗配置表
+    tracing::info!("=====查询积分消耗配置表");
+
+    let query_chat_cfg_ret = sqlx::query!(
+        "SELECT *
+          FROM fans_config
+          WHERE title = ? ",
+        "PointChat"
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(new_internal_error)?;
+
+    let chat_cfg_json = if query_chat_cfg_ret.len() > 0 {
+        query_chat_cfg_ret[0]
+            .content
+            .clone()
+            .unwrap_or(String::from(
+                r#"{"chat_points":0, "base_fee":1000, "idol_pool_fee":9000}"#,
+            ))
+    } else {
+        String::from(r#"{"chat_points":0, "base_fee":1000, "idol_pool_fee":9000}"#)
+    };
+    let chat_cfg: ChatConfig = serde_json::from_str(&chat_cfg_json).unwrap_or(ChatConfig {
+        chat_points: 0,
+        base_fee: 0,
+        idol_pool_fee: 0,
+    });
+    tracing::info!("=====聊天消耗积分: {}", chat_cfg.chat_points);
+
+    // 查询用户积分余额是否足够
+    tracing::info!("=====查询用户积分余额");
+    let query_balance_ret = sqlx::query!(
+        "SELECT *
+          FROM user_integral_wallet
+          WHERE address = ? ",
+        req.address
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(new_internal_error)?;
+
+    let user_points_balance = if query_balance_ret.len() > 0 {
+        query_balance_ret[0].balance.unwrap_or(0)
+    } else {
+        0
+    };
+    tracing::info!(
+        "=====用户:{:?} , 积分余额:{:?}",
+        req.address,
+        user_points_balance
+    );
+
+    Ok(RespVO::from(&AIChatConfigResp {
+        address: req.address,
+        idol_id: req.idol_id,
+        can_chat: user_points_balance as u64 > chat_cfg.chat_points,
+        chat_points: chat_cfg.chat_points,
+        cur_points_balance: user_points_balance as u64,
+        base_fee_rate: chat_cfg.base_fee as f32 / 10000.0,
+        idol_pool_rate: chat_cfg.idol_pool_fee as f32 / 10000.0,
+    })
+    .resp_json())
+}
+
 // 获取地址是否是白名单
 pub async fn ai_chat(
     // headers: HeaderMap,
@@ -253,11 +342,36 @@ pub async fn ai_chat(
     let msg_id = Uuid::new_v4().to_string();
 
     // TODO: 查询积分消耗配置表
-    let cfg_chat_point_consume = 10; // 聊天一次消耗, 10 积分
-    let cfg_chat_base_fee_rate = 1000; // 1000 / 10000,  即 10%
-                                       // let cfg_chat_idol_pool_rate = 10000 - cfg_chat_base_fee_rate; // 9000 / 10000 , 即 90%
-    let base_fee_points = cfg_chat_base_fee_rate * cfg_chat_point_consume / 10000; // 平台的积分抽水
-    let idol_pool_points = cfg_chat_point_consume - base_fee_points; //cfg_chat_idol_pool_rate * cfg_chat_point_consume / 10000; // 进入偶像积分池的积分
+    tracing::info!("=====查询积分消耗配置表");
+
+    let query_chat_cfg_ret = sqlx::query!(
+        "SELECT *
+        FROM fans_config
+        WHERE title = ? ",
+        "PointChat"
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(new_internal_error)?;
+
+    let chat_cfg_json = if query_chat_cfg_ret.len() > 0 {
+        query_chat_cfg_ret[0]
+            .content
+            .clone()
+            .unwrap_or(String::from(
+                r#"{"chat_points":0, "base_fee":1000, "idol_pool_fee":9000}"#,
+            ))
+    } else {
+        String::from(r#"{"chat_points":0, "base_fee":1000, "idol_pool_fee":9000}"#)
+    };
+    let chat_cfg: ChatConfig = serde_json::from_str(&chat_cfg_json).unwrap_or(ChatConfig {
+        chat_points: 0,
+        base_fee: 0,
+        idol_pool_fee: 0,
+    });
+    let base_fee_points = chat_cfg.base_fee * chat_cfg.chat_points / 10000; // 平台的积分抽水
+    let idol_pool_points = chat_cfg.chat_points - base_fee_points;
+    tracing::info!("=====聊天消耗积分: {}", chat_cfg.chat_points);
 
     // 查询用户积分余额是否足够
     tracing::info!("=====查询用户积分余额");
@@ -282,20 +396,31 @@ pub async fn ai_chat(
         user_points_balance
     );
 
-    if user_points_balance < cfg_chat_point_consume {
+    if (user_points_balance as u64) < chat_cfg.chat_points {
         tracing::error!(
             "用户积分余额:{}, 不足聊天积分消耗:{}",
             user_points_balance,
-            cfg_chat_point_consume
+            chat_cfg.chat_points
         );
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(RespVO::<String> {
-                code: Some(20010),
-                msg: Some(String::from("points is not enough")),
-                data: None,
-            }),
-        ));
+        // return Err((
+        //     StatusCode::BAD_REQUEST,
+        //     Json(RespVO::<String> {
+        //         code: Some(20010),
+        //         msg: Some(String::from("points is not enough")),
+        //         data: None,
+        //     }),
+        // ));
+
+        // 这里以聊天消息的方式返回，代替报错
+        return Ok(RespVO::from(&AIChatResp {
+            language: req.language,
+            address: req.address,
+            idol_id: req.idol_id,
+            msg_id: String::from(""),
+            ref_msg_id: String::from(""),
+            content: String::from("Sorry, your points is not enough for chatting."),
+        })
+        .resp_json());
     }
     // TODO: 锁定用户余额
 
@@ -421,9 +546,9 @@ pub async fn ai_chat(
             AND
             balance >= ?
             "#,
-        cfg_chat_point_consume,
+        chat_cfg.chat_points,
         req.address,
-        cfg_chat_point_consume
+        chat_cfg.chat_points,
     )
     .execute(&pool)
     .await
@@ -438,7 +563,7 @@ pub async fn ai_chat(
             VALUES (?, ?, ?, ?, ?, ?, ?)"#,
         msg_id.clone(),
         req.idol_id,
-        cfg_chat_point_consume, // 消耗的积分
+        chat_cfg.chat_points, // 消耗的积分
         req.address,
         base_fee_points, // 平台手续费获得的积分
         idol_pool_points, // 偶像积分池的积分

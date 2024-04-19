@@ -226,7 +226,6 @@ pub struct AIChatHistoryReq {
     pub page_size: u32,
 }
 
-
 #[derive(Deserialize, Clone, Debug, Serialize)]
 pub struct HistoryChatMsgBody {
     pub no: i64,
@@ -248,4 +247,23 @@ pub struct AIChatHistoryResp {
     pub page_size: u32,
     // pub total_count: u32,
     pub history_messages: Vec<HistoryChatMsgBody>,
+}
+
+// 查询聊天配置信息
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct AIChatConfigReq {
+    pub address: String,
+    pub idol_id: u32,
+}
+
+// 查询聊天配置信息响应
+#[derive(Deserialize, Clone, Debug, Serialize)]
+pub struct AIChatConfigResp {
+    pub address: String,
+    pub idol_id: u32,
+    pub can_chat: bool,          // 是否可以聊天
+    pub chat_points: u64,        // 一次聊天所需消耗
+    pub cur_points_balance: u64, // 用户当前积分余额
+    pub base_fee_rate: f32,      // 平台手续费比例
+    pub idol_pool_rate: f32,     // 偶像积分池比例
 }
