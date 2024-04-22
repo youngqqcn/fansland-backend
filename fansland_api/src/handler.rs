@@ -46,6 +46,7 @@ pub struct AppState {
     pub web_domain: String,
     pub env: String,
     pub database_url: String,
+    pub openlove_url: String,
 }
 
 // 获取积分排行榜
@@ -482,7 +483,7 @@ pub async fn ai_chat(
     // 发起http请求
     let client = reqwest::Client::new();
     let resp = client
-        .post("http://52.74.15.236/api/chat/send")
+        .post(format!("{}/api/chat/send", app_state.openlove_url))
         .json(&req_json_body)
         .timeout(Duration::new(60, 0)) // 超时时间 60s
         .send()

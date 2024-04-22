@@ -1,5 +1,8 @@
+start-api-dev:
+	cargo run --bin fansland_api  -r -- --env test  --openlove-url http://52.74.15.236 >> api.log 2>&1 &
+
 start-api-test:
-	cargo run --bin fansland_api  -r -- --env test >> api.log 2>&1 &
+	cargo run --bin fansland_api  -r -- --env test  --openlove-url http://172.40.1.52 >> api.log 2>&1 &
 
 start-api-uat:
 	cargo run --bin fansland_api  -r -- --env uat >> api.log 2>&1 &

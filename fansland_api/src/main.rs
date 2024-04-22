@@ -26,8 +26,11 @@ mod handler;
 struct Args {
     /// env ,  [test: for test env], [uat: for uat env], [pro: for pro env]
     #[arg(short, long)]
-    #[arg()]
     env: String,
+
+    /// openlove-url , http://52.74.15.236 , http://172.40.1.52
+    #[arg(short, long)]
+    openlove_url: String,
 }
 
 #[tokio::main]
@@ -61,12 +64,14 @@ async fn main() {
 
     let env = args.env.to_uppercase();
     let database_url = std::env::var(format!("DATABASE_URL_{env}")).unwrap();
+    let openlove_url = args.openlove_url.as_str().to_owned();
 
     let app_state = AppState {
         rds_pool: redis_pool.clone(),
         web_domain: web_domain.to_owned(),
         env: args.env.to_uppercase(),
         database_url: database_url,
+        openlove_url: openlove_url,
     };
 
     // build our application with some routes
