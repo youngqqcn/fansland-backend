@@ -482,7 +482,7 @@ pub async fn ai_chat(
     // 发起http请求
     let client = reqwest::Client::new();
     let resp = client
-        .post("https://52.74.15.236/api/chat/send")
+        .post("http://52.74.15.236/api/chat/send")
         .json(&req_json_body)
         .timeout(Duration::new(60, 0)) // 超时时间 60s
         .send()
