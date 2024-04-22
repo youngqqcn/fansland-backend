@@ -5,10 +5,10 @@ start-api-test:
 	cargo run --bin fansland_api  -r -- --env test  --openlove-url http://172.40.1.52 >> api.log 2>&1 &
 
 start-api-uat:
-	cargo run --bin fansland_api  -r -- --env uat >> api.log 2>&1 &
+	cargo run --bin fansland_api  -r -- --env uat --openlove-url http://172.40.1.52 >> api.log 2>&1 &
 
 start-api-main:
-	cargo run --bin fansland_api  -r -- --env pro >> api.log 2>&1 &
+	cargo run --bin fansland_api  -r -- --env pro --openlove-url http://172.40.1.52  >> api.log 2>&1 &
 
 #只在生产环境启动openapi
 start-openapi-pro:
