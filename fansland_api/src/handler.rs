@@ -326,7 +326,7 @@ pub async fn query_chat_config(
     .resp_json())
 }
 
-// 获取地址是否是白名单
+// ai idol聊天
 pub async fn ai_chat(
     // headers: HeaderMap,
     State(app_state): State<AppState>,
@@ -482,7 +482,7 @@ pub async fn ai_chat(
     // 发起http请求
     let client = reqwest::Client::new();
     let resp = client
-        .post("https://openlove.fancyai.net/api/chat/send")
+        .post("https://52.74.15.236/api/chat/send")
         .json(&req_json_body)
         .timeout(Duration::new(60, 0)) // 超时时间 60s
         .send()
