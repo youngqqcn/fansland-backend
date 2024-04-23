@@ -25,7 +25,7 @@ def push_to_redis(path, ticket_type_id, nums):
     # if True:
     for w in qrcodes:
         # r.sadd("whitelists:advance:0410",  w)
-        r.lpush('redeempool:{}'.format(ticket_type_id), w)
+        r.rpush('redeempool:{}'.format(ticket_type_id), w)
         # print('插入成功: {}'.format(w))
     print('一共{}'.format(len(qrcodes)))
     pass
