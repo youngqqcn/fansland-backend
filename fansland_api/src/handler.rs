@@ -772,7 +772,15 @@ pub async fn get_login_signmsg(
     let _ = verify_sig(headers.clone(), req.address.clone()).await?;
     tracing::debug!("========获取签名消息===");
 
-    let msg_domain = app_state.web_domain;
+    let mut msg_domain = app_state.web_domain;
+    if req.is_ai.unwrap_or(false){
+        msg_domain = match app_state.env.to_uppercase().as_str() {
+            "TEST" => "test-ai.fansland.xyz".to_owned(),
+            "UAT" => "uat-ai.fansland.io".to_owned(),
+            "PRO" => "ai.fansland.io".to_owned(),
+            _ =>  "ai.fansland.io".to_owned(),
+        }
+    }
     let msg_nonce = rand::thread_rng().gen_range(10_000_000..=99_999_999); // 必须是8位数整数
     let msg_timestamp = Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let msg_template = format!("{} wants you to sign in with your Ethereum account:\n{}\n\nWelcome to Fansland!\n\nURI: {}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",

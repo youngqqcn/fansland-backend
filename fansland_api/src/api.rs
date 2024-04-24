@@ -42,6 +42,10 @@ pub struct LoginByAddressResp {
 pub struct GetLoginNonceReq {
     pub address: String,
     pub chainid: u64,
+
+    // TODO:
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_ai: Option<bool>,
 }
 
 // get wallet login nonce
