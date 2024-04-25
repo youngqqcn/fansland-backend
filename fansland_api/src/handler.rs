@@ -585,24 +585,26 @@ pub async fn query_ticket_qrcode_by_token_id(
     // let mut token_id_owner = address;
 
     // access_type 访问类型:  3: web3 ,  2: web2
-    let mut is_web2_redeem = false;
-    if access_type == 2 {
-        let redeemaddress_key = "redeemaddress";
-        let member = format!("{}_{}_{}", chainid, token_id, address.to_lowercase());
-        let is_redeem_ret: Vec<u64> = redis::pipe()
-            .sismember(redeemaddress_key, member)
-            .query_async(&mut rds_conn)
-            .await
-            .map_err(new_internal_error)?;
+    let is_web2_redeem = false;
 
-        is_web2_redeem = is_redeem_ret[0] == 1;
+    // ==== 关闭 web2查二维码， 所有web2二维码提前生成好，导入李咏那边，都走李咏那边
+    // if access_type == 2 {
+    //     let redeemaddress_key = "redeemaddress";
+    //     let member = format!("{}_{}_{}", chainid, token_id, address.to_lowercase());
+    //     let is_redeem_ret: Vec<u64> = redis::pipe()
+    //         .sismember(redeemaddress_key, member)
+    //         .query_async(&mut rds_conn)
+    //         .await
+    //         .map_err(new_internal_error)?;
 
-        if is_web2_redeem {
-            tracing::info!("Good, 用户存在兑换码兑换记录, 走web2的业务逻辑,直接返回二维码");
-        } else {
-            tracing::info!("Sorry, 不存在兑换记录, 要走web3的业务逻辑, 校验链上数据情况");
-        }
-    }
+    //     is_web2_redeem = is_redeem_ret[0] == 1;
+
+    //     if is_web2_redeem {
+    //         tracing::info!("Good, 用户存在兑换码兑换记录, 走web2的业务逻辑,直接返回二维码");
+    //     } else {
+    //         tracing::info!("Sorry, 不存在兑换记录, 要走web3的业务逻辑, 校验链上数据情况");
+    //     }
+    // }
 
     if !is_web2_redeem {
         // 从redis中获取该token_id的owner
