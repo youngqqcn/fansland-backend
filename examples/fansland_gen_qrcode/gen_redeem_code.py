@@ -29,6 +29,7 @@ def main():
     # write_to_csv('qrcode.csv', num=20000, ticket_type='Regular 1-Day Ticket (4 May)' )
     # write_to_csv('qrcode.csv', num=20000, ticket_type='Regular 1-Day Ticket (5 May)' )
     # write_to_csv('qrcode.csv', num=20000, ticket_type='Regular 2-Day Ticket(4-5 May)' )
+    write_to_csv('redeem_code_vvip_1000.csv', num=1000, ticket_type='4' )
 
     pass
 
