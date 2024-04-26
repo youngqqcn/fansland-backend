@@ -49,6 +49,11 @@ def main():
         '4': "Regular 2-Day Ticket (4-5 May)",
         '5': "Co-Host OKX WEB3(4-5 May)",
         '6': "Fansland X OneKey(4-5 May)",
+        '7': "Fansland X HPOS10I(4-5 May)",
+        "8":"Fansland X IOST(4-5 May)",
+        "9":"Fansland X Hape(4-5 May)",
+        "10":"Fansland X NFTGo(4-5 May)",
+        "11":"Fansland X Gonesis(4-5 May)",
 
 
         # VIP卡座票
