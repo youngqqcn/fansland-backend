@@ -592,7 +592,7 @@ pub async fn ai_chat(
         req.address,
         chat_cfg.chat_points, // 消耗的积分
         0,
-        19, // 聊天消耗
+        11, // 聊天消耗
         msg_id.clone(),
     )
     .execute(&pool)
