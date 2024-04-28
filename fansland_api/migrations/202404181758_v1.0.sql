@@ -57,4 +57,20 @@ CREATE TABLE `fans_config` (
   `status` int DEFAULT '1' COMMENT '状态',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `title_unq_key` (`title`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='配置信息表'
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='配置信息表';
+
+
+
+CREATE TABLE `events_integral_record` (
+  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'Pk',
+  `events_id` int DEFAULT NULL COMMENT '活动id',
+  `chain_id` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '链编号',
+  `address` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '地址',
+  `contract` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '合约地址',
+  `amount` bigint DEFAULT NULL COMMENT '数量',
+  `decimal` int DEFAULT NULL COMMENT '精度',
+  `type` int DEFAULT NULL COMMENT '类型0链上交易1邀请赠送2空投赠送',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `hash` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'hash',
+  KEY `address_key` (`chain_id`,`address`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='积分记录';

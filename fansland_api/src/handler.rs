@@ -329,11 +329,11 @@ pub async fn query_chat_config(
 
 // ai idol聊天
 pub async fn ai_chat(
-    // headers: HeaderMap,
+    headers: HeaderMap,
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
@@ -569,6 +569,31 @@ pub async fn ai_chat(
         base_fee_points, // 平台手续费获得的积分
         idol_pool_points, // 偶像积分池的积分
         11, // 聊天消耗
+    )
+    .execute(&pool)
+    .await
+    .map_err(new_internal_error)?
+    .rows_affected();
+
+    // 插入流水记录
+    tracing::info!("=====插入聊天积分消耗流水记录======");
+    let cur_timestamp = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .expect("获取时间戳失败")
+    .as_micros().to_string() // 16位
+    + &rand::thread_rng().gen_range(1111111..=9999999).to_string();
+
+    let _ = sqlx::query!(
+        r#"
+            INSERT IGNORE INTO events_integral_record (id, events_id,  address, amount, `decimal`, type, hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
+        &cur_timestamp[0..18],
+        req.idol_id,
+        req.address,
+        chat_cfg.chat_points, // 消耗的积分
+        0,
+        19, // 聊天消耗
+        msg_id.clone(),
     )
     .execute(&pool)
     .await
