@@ -10,7 +10,7 @@ def write_to_csv(filename, num, ticket_type, ):
     with open(filename, 'w') as csvfile:
         # writer = csv.writer(csvfile)
         for _ in range(num):
-            random_string =  generate_random_string(9).upper() + ',' +  ticket_type + '\n'
+            random_string =  generate_random_string(9).upper() + '\n'
             csvfile.write(random_string)
 
 def main():
@@ -30,13 +30,14 @@ def main():
     # write_to_csv('qrcode.csv', num=20000, ticket_type='Regular 1-Day Ticket (5 May)' )
     # write_to_csv('qrcode.csv', num=20000, ticket_type='Regular 2-Day Ticket(4-5 May)' )
     # write_to_csv('redeem_code_vvip_1000.csv', num=1000, ticket_type='4' )
+    write_to_csv('redeem_code_vvip_3000.csv', num=3000, ticket_type='' )
 
     # write_to_csv('redeem_code_ime_100_4_5.csv', num=100, ticket_type='Regular 1-Day Ticket (4 May)' )
     # write_to_csv('redeem_code_ime_100_5_5.csv', num=100, ticket_type='Regular 1-Day Ticket (5 May)' )
 
-    write_to_csv('bak_redeem_code_ime_500_1day_4_5.csv', num=500, ticket_type='Regular 1-Day Ticket (4 May)' )
-    write_to_csv('bak_redeem_code_ime_500_1day_5_5.csv', num=500, ticket_type='Regular 1-Day Ticket (5 May)' )
-    write_to_csv('bak_redeem_code_ime_500_2days_4-5_5.csv', num=500, ticket_type='Regular 2-Day Ticket (4-5 May)' )
+    # write_to_csv('bak_redeem_code_ime_500_1day_4_5.csv', num=500, ticket_type='Regular 1-Day Ticket (4 May)' )
+    # write_to_csv('bak_redeem_code_ime_500_1day_5_5.csv', num=500, ticket_type='Regular 1-Day Ticket (5 May)' )
+    # write_to_csv('bak_redeem_code_ime_500_2days_4-5_5.csv', num=500, ticket_type='Regular 2-Day Ticket (4-5 May)' )
 
     pass
 
