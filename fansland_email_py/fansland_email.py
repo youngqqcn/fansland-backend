@@ -54,6 +54,7 @@ def main():
         "9":"Fansland X Hape(4-5 May)",
         "10":"Fansland X NFTGo(4-5 May)",
         "11":"Fansland X Gonesis(4-5 May)",
+        "99":"VVIP 2-Day Ticket(4-5 May)",
 
 
         # VIP卡座票

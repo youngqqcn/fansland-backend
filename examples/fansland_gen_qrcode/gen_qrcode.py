@@ -29,11 +29,12 @@ def main():
     #     6: "Fansland X OneKey(4-5 May)",
     # };
 
-    write_to_csv('qrcode_early.csv', num=5000, ticket_type='0' )
-    write_to_csv('qrcode_advance.csv', num=5000, ticket_type='1' )
-    write_to_csv('qrcode_regular_4_5.csv', num=10000, ticket_type='2' )
-    write_to_csv('qrcode_regular_5_5.csv', num=10000, ticket_type='3' )
-    write_to_csv('qrcode_regular_2_days.csv', num=20000, ticket_type='4')
+    # write_to_csv('qrcode_early.csv', num=5000, ticket_type='0' )
+    # write_to_csv('qrcode_advance.csv', num=5000, ticket_type='1' )
+    # write_to_csv('qrcode_regular_4_5.csv', num=10000, ticket_type='2' )
+    # write_to_csv('qrcode_regular_5_5.csv', num=10000, ticket_type='3' )
+    # write_to_csv('qrcode_regular_2_days.csv', num=20000, ticket_type='4')
+    write_to_csv('qrcode_vvip_2_days.csv', num=4000, ticket_type='4')
 
 
     pass

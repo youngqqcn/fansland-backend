@@ -31,11 +31,13 @@ def push_to_redis(path, ticket_type_id, nums):
     pass
 
 def main():
-    push_to_redis('./qrcodes_04_23/qrcode_early.csv', 0, 3000)
-    push_to_redis('./qrcodes_04_23/qrcode_advance.csv', 1, 3000)
-    push_to_redis('./qrcodes_04_23/qrcode_regular_4_5.csv', 2, 3000)
-    push_to_redis('./qrcodes_04_23/qrcode_regular_5_5.csv', 3, 3000)
-    push_to_redis('./qrcodes_04_23/qrcode_regular_2_days.csv', 4, 3000)
+    # push_to_redis('./qrcodes_04_23/qrcode_early.csv', 0, 3000)
+    # push_to_redis('./qrcodes_04_23/qrcode_advance.csv', 1, 3000)
+    # push_to_redis('./qrcodes_04_23/qrcode_regular_4_5.csv', 2, 3000)
+    # push_to_redis('./qrcodes_04_23/qrcode_regular_5_5.csv', 3, 3000)
+    # push_to_redis('./qrcodes_04_23/qrcode_regular_2_days.csv', 4, 3000)
+    push_to_redis('./qrcodes_04_23/qrcode_vvip_2_days.csv', 99, 3000)
+
     pass
 
 if __name__ == '__main__':
