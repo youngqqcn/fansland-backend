@@ -250,11 +250,11 @@ struct ChatConfig {
 
 // 获取地址是否是白名单
 pub async fn query_chat_config(
-    // headers: HeaderMap,
+    headers: HeaderMap,
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatConfigReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
@@ -611,13 +611,13 @@ pub async fn ai_chat(
     .resp_json())
 }
 
-// 获取地址是否是白名单
+// 查询聊天记录
 pub async fn query_chat_history(
-    // headers: HeaderMap,
+    headers: HeaderMap,
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatHistoryReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
