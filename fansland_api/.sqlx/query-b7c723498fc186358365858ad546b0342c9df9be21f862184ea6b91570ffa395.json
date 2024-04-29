@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT IGNORE INTO events_integral_record (id, events_id,  address, amount, `decimal`, type, create_time, hash)\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "b7c723498fc186358365858ad546b0342c9df9be21f862184ea6b91570ffa395"
+}

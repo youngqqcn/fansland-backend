@@ -21,3 +21,5 @@ jsonwebtoken = "9.2.0"
 getset = "0.1.2"
 uuid = { version = "1.6.1", features = ["v8"] }
 rand = "0.8.5"
+
+chrono = { version = "0.4.31", features = ["serde"] }

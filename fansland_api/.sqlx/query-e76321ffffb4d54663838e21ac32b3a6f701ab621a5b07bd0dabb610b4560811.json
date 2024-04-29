@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content, create_time)\n            VALUES (?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "e76321ffffb4d54663838e21ac32b3a6f701ab621a5b07bd0dabb610b4560811"
+}

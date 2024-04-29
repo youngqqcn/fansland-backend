@@ -4,10 +4,9 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json, Response},
 };
-use chrono::{DateTime, Utc};
-// use chrono::{NaiveDateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use email_address::EmailAddress;
-use fansland_common::{jwt::JWTToken, RespVO};
+use fansland_common::{jwt::JWTToken, utils, RespVO};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::mysql::MySqlPoolOptions;
@@ -333,7 +332,7 @@ pub async fn ai_chat(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
@@ -341,6 +340,11 @@ pub async fn ai_chat(
         .await
         .map_err(new_internal_error)?;
     let msg_id = Uuid::new_v4().to_string();
+
+    // sqlx::query("SET time_zone = '+8:00'")
+    //     .execute(&pool)
+    //     .await
+    //     .map_err(new_internal_error)?;
 
     // 查询积分消耗配置表
     tracing::info!("=====查询积分消耗配置表");
@@ -429,14 +433,15 @@ pub async fn ai_chat(
     tracing::info!("=====将消息插入数据库");
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content)
-            VALUES (?, ?, ?, ?, ?, ?)"#,
+            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content, create_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
         req.idol_id,
         msg_id,
         "",
         "user",
         req.address,
         req.message.clone(),
+        utils::datetime::get_format_datetime()
     )
     .execute(&pool)
     .await
@@ -521,14 +526,15 @@ pub async fn ai_chat(
     let rsp_content = rsp.content.unwrap_or(String::from(""));
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content)
-            VALUES (?, ?, ?, ?, ?, ?)"#,
+            INSERT IGNORE INTO chat_history (idol_id, msg_id, ref_msg_id, role, address, content, create_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
         req.idol_id,
         reply_msg_id.clone(),
         msg_id,
         "assistant",
         req.address,
         rsp_content.clone(),
+        utils::datetime::get_format_datetime()
     )
     .execute(&pool)
     .await
@@ -560,8 +566,8 @@ pub async fn ai_chat(
     tracing::info!("=====插入积分消耗记录======");
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO ai_idol_point_record (id, idol_id, amount, address, base_fee, idol_pool_fee, trans_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
+            INSERT IGNORE INTO ai_idol_point_record (id, idol_id, amount, address, base_fee, idol_pool_fee, trans_type, create_time)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#,
         msg_id.clone(),
         req.idol_id,
         chat_cfg.chat_points, // 消耗的积分
@@ -569,6 +575,7 @@ pub async fn ai_chat(
         base_fee_points, // 平台手续费获得的积分
         idol_pool_points, // 偶像积分池的积分
         11, // 聊天消耗
+        utils::datetime::get_format_datetime()
     )
     .execute(&pool)
     .await
@@ -583,16 +590,27 @@ pub async fn ai_chat(
     .as_micros().to_string() // 16位
     + &rand::thread_rng().gen_range(1111111..=9999999).to_string();
 
+    // 获取当前时间戳
+    let current_time = Local::now();
+    // current_time.with_timezone(TimeZone::);
+    // 将时间戳转换为 UTC+8 时区
+    // let fixed_offset = FixedOffset::(8 * 3600); // UTC+8 时区偏移量，单位为秒
+    // let local_time:  = current_time.with_timezone(&fixed_offset).to;
+
+    tracing::info!("cur time: {}", current_time.to_string());
+
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO events_integral_record (id, events_id,  address, amount, `decimal`, type, hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
+            INSERT IGNORE INTO events_integral_record (id, events_id,  address, amount, `decimal`, type, create_time, hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#,
         &cur_timestamp[0..18],
         req.idol_id,
         req.address,
         chat_cfg.chat_points, // 消耗的积分
         0,
         11, // 聊天消耗
+        // "2024-04-29 11:55:00",
+        utils::datetime::get_format_datetime(),
         msg_id.clone(),
     )
     .execute(&pool)
