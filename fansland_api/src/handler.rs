@@ -327,12 +327,13 @@ pub async fn query_chat_config(
 }
 
 // ai idol聊天
+#[allow(unused)]
 pub async fn ai_chat(
     headers: HeaderMap,
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
@@ -563,11 +564,16 @@ pub async fn ai_chat(
     .rows_affected();
 
     // 插入积分消耗记录
+    let cur_timestamp_ms = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .expect("获取时间戳失败")
+    .as_millis() as u64 ;
+
     tracing::info!("=====插入积分消耗记录======");
     let _ = sqlx::query!(
         r#"
-            INSERT IGNORE INTO ai_idol_point_record (id, idol_id, amount, address, base_fee, idol_pool_fee, trans_type, create_time)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#,
+            INSERT IGNORE INTO ai_idol_point_record (id, idol_id, amount, address, base_fee, idol_pool_fee, trans_type, create_time, create_time_stamp, create_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
         msg_id.clone(),
         req.idol_id,
         chat_cfg.chat_points, // 消耗的积分
@@ -575,7 +581,9 @@ pub async fn ai_chat(
         base_fee_points, // 平台手续费获得的积分
         idol_pool_points, // 偶像积分池的积分
         11, // 聊天消耗
-        utils::datetime::get_format_datetime()
+        utils::datetime::get_format_datetime(),
+        cur_timestamp_ms,
+        utils::datetime::get_format_date()
     )
     .execute(&pool)
     .await
@@ -1051,6 +1059,7 @@ pub async fn query_ticket_qrcode_by_address(
     .await
 }
 
+#[allow(unused)]
 pub async fn query_ticket_qrcode_by_token_id(
     mut rds_conn: RedisPoolConnection<Connection>,
     contract_address: String,

@@ -26,15 +26,16 @@ CREATE TABLE `ai_idol_point_record` (
   `base_fee` bigint DEFAULT '0' COMMENT '平台手续费',
   `idol_pool_fee` bigint DEFAULT '0' COMMENT '偶像池手续费',
   `trans_type` int DEFAULT NULL COMMENT '交易类型, 11:文字聊天消耗',
-  `create_time_stamp` bigint NULL DEFAULT (UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000) COMMENT '创建时间戳(ms)',
+  `create_time_stamp` bigint DEFAULT NULL COMMENT '创建时间戳(ms)',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `create_date` date   DEFAULT (CURRENT_DATE) COMMENT '日期',
-  PRIMARY KEY (`id`),
+  `create_date` date DEFAULT NULL COMMENT '日期',
+  PRIMARY KEY (`id`) USING BTREE,
   KEY `address_fk` (`address`) USING BTREE,
   KEY `idol_fk` (`idol_id`) USING BTREE,
   KEY `idol_address_fk` (`idol_id`,`address`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='偶像积分消费记录';
--- fansland_sol.user_integral_wallet definition
+
+
 
 CREATE TABLE `user_integral_wallet` (
   `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'PK',
