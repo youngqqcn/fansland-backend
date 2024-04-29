@@ -332,7 +332,7 @@ pub async fn ai_chat(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<AIChatReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    // let _ = verify_sig(headers.clone(), req.address.clone()).await?;
+    let _ = verify_sig(headers.clone(), req.address.clone()).await?;
 
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
