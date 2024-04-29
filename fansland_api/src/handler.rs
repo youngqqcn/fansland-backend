@@ -614,7 +614,7 @@ pub async fn ai_chat(
         &cur_timestamp[0..18],
         req.idol_id,
         req.address,
-        chat_cfg.chat_points, // 消耗的积分
+        - (chat_cfg.chat_points as i32), // 消耗的积分
         0,
         11, // 聊天消耗
         // "2024-04-29 11:55:00",
