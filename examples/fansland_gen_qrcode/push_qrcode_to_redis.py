@@ -36,7 +36,8 @@ def main():
     # push_to_redis('./qrcodes_04_23/qrcode_regular_4_5.csv', 2, 3000)
     # push_to_redis('./qrcodes_04_23/qrcode_regular_5_5.csv', 3, 3000)
     # push_to_redis('./qrcodes_04_23/qrcode_regular_2_days.csv', 4, 3000)
-    push_to_redis('./qrcodes_04_23/qrcode_vvip_2_days.csv', 99, 4000)
+    # push_to_redis('./qrcodes_04_23/qrcode_vvip_2_days.csv', 99, 4000)
+    push_to_redis('./100_fix', 4, 100)
 
     pass
 
