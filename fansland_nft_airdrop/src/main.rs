@@ -314,7 +314,9 @@ async fn airdrop(
     let token_id: U256 = token_id.into();
     let recipient: Address = recipient.parse()?;
 
-    let tx = contract.redeem_airdrop(type_id, token_id, recipient);
+    let tx = contract
+        .redeem_airdrop(type_id, token_id, recipient)
+        .gas_price(9);
     tracing::info!("raw_tx: {:?}", tx);
     tracing::info!("==================");
 
