@@ -1035,6 +1035,7 @@ pub async fn query_ticket_qrcode_by_address(
         qrcode: "expired".to_owned(),
         contract_address: fansland_nft_contract_address.clone(),
         chain_id: req.chainid,
+        status: "EXPIRED".to_owned(),
     };
     return Ok(RespVO::from(&r).resp_json());
 
@@ -1163,6 +1164,7 @@ pub async fn query_ticket_qrcode_by_token_id(
         qrcode: qrcode,
         contract_address: fansland_nft_contract_address,
         chain_id: chainid,
+        status: "".to_owned()
     };
 
     Ok(RespVO::from(&r).resp_json())

@@ -94,6 +94,7 @@ pub struct QueryTicketQrCodeResp {
     pub contract_address: String,
     pub nft_token_id: u32,
     pub qrcode: String,
+    pub status: String,
     // pub redeem_status: u32,
     // pub type_id: u32,
     // pub ticket_type_name: String,
