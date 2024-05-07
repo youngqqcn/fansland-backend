@@ -565,9 +565,9 @@ pub async fn ai_chat(
 
     // 插入积分消耗记录
     let cur_timestamp_ms = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .expect("获取时间戳失败")
-    .as_millis() as u64 ;
+        .duration_since(UNIX_EPOCH)
+        .expect("获取时间戳失败")
+        .as_millis() as u64;
 
     tracing::info!("=====插入积分消耗记录======");
     let _ = sqlx::query!(
@@ -1024,9 +1024,22 @@ pub async fn query_ticket_qrcode_by_address(
     State(app_state): State<AppState>,
     JsonReq(req): JsonReq<QueryTicketQrCodeReq>,
 ) -> Result<Response<Body>, (StatusCode, Json<RespVO<String>>)> {
-    let _ = verify_token(headers, &app_state, req.address.clone()).await?;
+    // let _ = verify_token(headers, &app_state, req.address.clone()).await?;
+    let k = format!("FANSLAND_NFT_{}_{}", req.chainid, app_state.env);
+    tracing::debug!("k = {}", k);
+    let fansland_nft_contract_address = std::env::var(k).map_err(new_internal_error)?;
+
+    let r = QueryTicketQrCodeResp {
+        user_address: req.address.clone(),
+        nft_token_id: req.token_id,
+        qrcode: "expired".to_owned(),
+        contract_address: fansland_nft_contract_address.clone(),
+        chain_id: req.chainid,
+    };
+    return Ok(RespVO::from(&r).resp_json());
 
     // 使用redis
+    #[allow(unreachable_code)]
     let rds_conn = app_state
         .rds_pool
         .aquire()
@@ -1034,10 +1047,6 @@ pub async fn query_ticket_qrcode_by_address(
         .map_err(new_internal_error)?;
 
     tracing::debug!("=从redis获取绑定tokenid对应的二维码== ",);
-
-    let k = format!("FANSLAND_NFT_{}_{}", req.chainid, app_state.env);
-    tracing::debug!("k = {}", k);
-    let fansland_nft_contract_address = std::env::var(k).map_err(new_internal_error)?;
 
     let acc_type = match req.access_type {
         Some(x) => match x {
